@@ -1,6 +1,7 @@
 /out/
 Debug/
 Release/
+/deep-researcher/
 /ThirdParty/
 /Telegram/build/target
 /Telegram/tests/
@@ -70,3 +71,6 @@ settings.local.json
 
 # Generated changelog page (built by CI, deployed to GitHub Pages)
 /docs/changelog/
+
+# claude-agents: per-developer plugin profile (do not commit)
+.claude/settings.local.json
