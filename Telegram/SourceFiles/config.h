@@ -37,9 +37,10 @@ enum {
 
 inline const char *cGUIDStr() {
 #ifndef OS_MAC_STORE
-	static const char *gGuidStr = "{87A94AB0-E370-4cde-98D3-ACC110C5967D}";
+	// FenixUz: unique GUID so single-instance lock & sockets don't clash with Telegram Desktop.
+	static const char *gGuidStr = "{F3E91A02-CDA4-4F3B-9B82-2AB85E5A1F88}";
 #else // OS_MAC_STORE
-	static const char *gGuidStr = "{E51FB841-8C0B-4EF9-9E9E-5A0078567627}";
+	static const char *gGuidStr = "{C5D2A341-3FA9-4ED1-A8C7-1B7E2C90B441}";
 #endif // OS_MAC_STORE
 
 	return gGuidStr;

@@ -13,6 +13,10 @@ if (TDESKTOP_API_TEST)
     set(TDESKTOP_API_HASH 344583e45741c457fe1862106095a5eb)
 endif()
 
+if (EXISTS "${CMAKE_CURRENT_LIST_DIR}/telegram_options.local.cmake")
+    include("${CMAKE_CURRENT_LIST_DIR}/telegram_options.local.cmake")
+endif()
+
 if (TDESKTOP_API_ID STREQUAL "0" OR TDESKTOP_API_HASH STREQUAL "")
     message(FATAL_ERROR
     " \n"

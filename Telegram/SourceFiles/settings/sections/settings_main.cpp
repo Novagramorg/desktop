@@ -45,6 +45,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "settings/settings_builder.h"
 #include "settings/cloud_password/settings_cloud_password_input.h"
 #include "settings/sections/settings_advanced.h"
+#include "fenix/sections/settings_fenix.h"
 #include "settings/sections/settings_business.h"
 #include "settings/sections/settings_calls.h"
 #include "settings/sections/settings_chat.h"
@@ -434,6 +435,13 @@ void BuildSectionButtons(SectionBuilder &builder) {
 		.targetSection = AdvancedId(),
 		.icon = { &st::menuIconManage },
 		.keywords = { u"performance"_q, u"proxy"_q, u"experimental"_q },
+	});
+
+	builder.addSectionButton({
+		.title = tr::lng_fenix_features(),
+		.targetSection = FenixId(),
+		.icon = { &st::menuIconShowInFolder },
+		.keywords = { u"ghost"_q, u"stealth"_q, u"offline"_q, u"fenix"_q, u"features"_q },
 	});
 
 	builder.addSectionButton({

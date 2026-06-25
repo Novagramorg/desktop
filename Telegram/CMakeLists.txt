@@ -853,6 +853,24 @@ PRIVATE
     export/view/export_view_settings.h
     export/view/export_view_top_bar.cpp
     export/view/export_view_top_bar.h
+    fenix/fenix_settings.cpp
+    fenix/fenix_settings.h
+    fenix/auto_translate.cpp
+    fenix/auto_translate.h
+    fenix/chat_preview_state.cpp
+    fenix/chat_preview_state.h
+    fenix/deleted_msg.cpp
+    fenix/deleted_msg.h
+    fenix/edit_history.cpp
+    fenix/edit_history.h
+    fenix/demo_number.cpp
+    fenix/demo_number.h
+    fenix/demo_loading_box.cpp
+    fenix/demo_loading_box.h
+    fenix/sections/settings_fenix.cpp
+    fenix/sections/settings_fenix.h
+    fenix/sections/edit_history_section.cpp
+    fenix/sections/edit_history_section.h
     history/admin_log/history_admin_log_filter.cpp
     history/admin_log/history_admin_log_filter.h
     history/admin_log/history_admin_log_inner.cpp
@@ -2140,12 +2158,12 @@ if (build_macstore)
     )
 else()
     if (CMAKE_GENERATOR STREQUAL Xcode)
-        set(bundle_identifier "com.tdesktop.Telegram$<$<CONFIG:Debug>:Debug>")
+        set(bundle_identifier "uz.vipads.FenixUz$<$<CONFIG:Debug>:Debug>")
     else()
-        set(bundle_identifier "com.tdesktop.Telegram")
+        set(bundle_identifier "uz.vipads.FenixUz")
     endif()
     set(bundle_entitlements "Telegram.entitlements")
-    set(output_name "Telegram")
+    set(output_name "FenixUz")
 endif()
 
 if (CMAKE_GENERATOR STREQUAL Xcode)

@@ -31,6 +31,8 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "history/view/history_view_reply_button.h"
 #include "history/view/history_view_context_menu.h"
 #include "history/view/history_view_reaction_preview.h"
+#include "fenix/edit_history.h"
+#include "fenix/sections/edit_history_section.h"
 #include "history/view/history_view_quick_action.h"
 #include "history/view/history_view_add_poll_option.h"
 #include "history/view/history_view_element_overlay.h"
@@ -2735,6 +2737,16 @@ void HistoryInner::showContextMenu(QContextMenuEvent *e, bool showFromTouch) {
 					_widget->editMessage(item, selection);
 				}
 			}, &st::menuIconEdit);
+		}
+		// FenixUz: show saved edit history if we recorded any versions.
+		if (Fenix::GetEdits().has(item->history()->peer->id, item->id)) {
+			const auto peer = item->history()->peer;
+			const auto msgId = item->id;
+			_menu->addAction(tr::lng_fenix_edit_history(tr::now), crl::guard(
+				controller,
+				[=] {
+					Fenix::ShowEditHistory(controller, peer, msgId);
+				}), &st::menuIconInfo);
 		}
 		if (session->factchecks().canEdit(item)) {
 			const auto text = item->factcheckText();

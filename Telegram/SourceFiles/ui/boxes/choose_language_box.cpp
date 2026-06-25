@@ -266,7 +266,8 @@ void ChooseLanguageBox(
 		Fn<void(std::vector<LanguageId>)> callback,
 		std::vector<LanguageId> selected,
 		bool multiselect,
-		Fn<bool(LanguageId)> toggleCheck) {
+		Fn<bool(LanguageId)> toggleCheck,
+		bool addNone) {
 	box->setMinHeight(st::boxWidth);
 	box->setMaxHeight(st::boxWidth);
 	box->setTitle(std::move(title));
@@ -279,6 +280,17 @@ void ChooseLanguageBox(
 	box->setFocusCallback([=] { multiSelect->setInnerFocus(); });
 
 	const auto container = box->verticalLayout();
+	if (addNone && !multiselect) {
+		// FenixUz: leading "Off" row that disables the per-chat option.
+		const auto none = container->add(object_ptr<SettingsButton>(
+			container,
+			tr::lng_fenix_auto_translate_off(),
+			st::defaultSettingsButton));
+		none->setClickedCallback([=] {
+			callback({});
+			box->closeBox();
+		});
+	}
 	const auto langs = [&] {
 		auto list = TranslationLanguagesList();
 		for (const auto id : list) {

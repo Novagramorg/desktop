@@ -7,6 +7,8 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "data/data_histories.h"
 
+#include "fenix/fenix_settings.h"
+#include "fenix/deleted_msg.h"
 #include "api/api_text_entities.h"
 #include "data/business/data_shortcut_messages.h"
 #include "data/components/scheduled_messages.h"
@@ -19,6 +21,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "data/data_saved_music.h"
 #include "data/data_saved_sublist.h"
 #include "data/data_session.h"
+#include "fenix/chat_preview_state.h"
 #include "data/data_user.h"
 #include "base/unixtime.h"
 #include "base/random.h"
@@ -132,6 +135,13 @@ MTPInputMedia WebPageForMTP(
 Histories::Histories(not_null<Session*> owner)
 : _owner(owner)
 , _readRequestsTimer([=] { sendReadRequests(); }) {
+	// FenixUz: flush held-back read receipts as soon as ghost mode is turned off.
+	Fenix::Get().ghostModeChanges(
+	) | rpl::filter([](bool on) {
+		return !on;
+	}) | rpl::on_next([=](bool) {
+		sendReadRequests();
+	}, _lifetime);
 }
 
 Session &Histories::owner() const {
@@ -246,6 +256,13 @@ void Histories::readInboxTill(
 		not_null<History*> history,
 		MsgId tillId,
 		bool force) {
+	// FenixUz: while a chat is open in ghost preview, never mark it read —
+	// no local read, no server "read" request, so the other side sees no blue
+	// checks and the chat keeps its unread state (zero footprint).
+	if (Fenix::GetChatPreview().isPreview(history->peer->id)) {
+		return;
+	}
+
 	Expects(IsServerMsgId(tillId) || (!tillId && !force));
 
 	DEBUG_LOG(("Reading: readInboxTill %1, force %2."
@@ -673,6 +690,10 @@ void Histories::sendReadRequests() {
 	if (_states.empty()) {
 		return;
 	}
+	// FenixUz: Ghost mode holds back read receipts so the server doesn't see activity.
+	if (Fenix::Get().ghostMode()) {
+		return;
+	}
 	const auto now = crl::now();
 	auto next = std::optional<crl::time>();
 	for (auto &[history, state] : _states) {
@@ -775,6 +796,11 @@ void Histories::deleteMessages(
 		not_null<History*> history,
 		const QVector<MTPint> &ids,
 		bool revoke) {
+	// FenixUz: mark this batch so SaveDeletedMsg lets it through.
+	Fenix::GetDeleted().markNextAsMine();
+	for (const auto &id : ids) {
+		Fenix::GetDeleted().forget(history->peer->id, id.v);
+	}
 	sendRequest(history, RequestType::Delete, [=](Fn<void()> finish) {
 		const auto done = [=](const MTPmessages_AffectedMessages &result) {
 			session().api().applyAffectedMessages(history->peer, result);

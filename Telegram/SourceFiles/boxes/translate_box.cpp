@@ -145,7 +145,7 @@ object_ptr<BoxContent> EditSkipTranslationLanguages() {
 		Core::App().settings().setSkipTranslationLanguages(
 			std::move(list));
 		Core::App().saveSettingsDelayed();
-	}, *selected, true, check);
+	}, *selected, true, check, false);
 	*weak = result.data();
 	return result;
 }
@@ -173,7 +173,7 @@ object_ptr<BoxContent> ChooseTranslateToBox(
 		Core::App().settings().setTranslateTo(id);
 		Core::App().saveSettingsDelayed();
 		callback(id);
-	}, selected, false, nullptr);
+	}, selected, false, nullptr, false);
 }
 
 LanguageId ChooseTranslateTo(not_null<History*> history) {

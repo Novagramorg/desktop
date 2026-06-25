@@ -7,6 +7,8 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "data/data_session.h"
 
+#include "fenix/fenix_settings.h"
+#include "fenix/deleted_msg.h"
 #include "main/main_session.h"
 #include "main/main_session_settings.h"
 #include "main/main_app_config.h"
@@ -2937,11 +2939,29 @@ void Session::processMessagesDeleted(
 		return;
 	}
 
+	// FenixUz: when Save Deleted Messages is enabled, intercept deletions
+	// coming from the server and keep the items visible (Android DeletedMsg
+	// pattern). Own deletions (marked via markNextAsMine) still proceed.
+	const auto saveDeleted = Fenix::Get().saveDeletedMsg();
+	const auto wasMine = saveDeleted && Fenix::GetDeleted().takeNextAsMine();
+
 	auto historiesToCheck = base::flat_set<not_null<History*>>();
 	for (const auto &messageId : data) {
 		const auto i = list ? list->find(messageId.v) : Messages::iterator();
 		if (list && i != list->end()) {
 			const auto history = i->second->history();
+			if (saveDeleted && !wasMine) {
+				const auto by = peerIsChannel(peerId)
+					? Fenix::DeletedBy::Channel
+					: Fenix::DeletedBy::Other;
+				Fenix::GetDeleted().recordDeletion(
+					peerId,
+					i->second->id,
+					by);
+				history->owner().notifyItemDataChange(i->second);
+				history->owner().requestItemRepaint(i->second);
+				continue;
+			}
 			i->second->destroy();
 			if (!history->chatListMessageKnown()) {
 				historiesToCheck.emplace(history);
@@ -2956,10 +2976,22 @@ void Session::processMessagesDeleted(
 }
 
 void Session::processNonChannelMessagesDeleted(const QVector<MTPint> &data) {
+	const auto saveDeleted = Fenix::Get().saveDeletedMsg();
+	const auto wasMine = saveDeleted && Fenix::GetDeleted().takeNextAsMine();
+
 	auto historiesToCheck = base::flat_set<not_null<History*>>();
 	for (const auto &messageId : data) {
 		if (const auto item = nonChannelMessage(messageId.v)) {
 			const auto history = item->history();
+			if (saveDeleted && !wasMine) {
+				Fenix::GetDeleted().recordDeletion(
+					history->peer->id,
+					item->id,
+					Fenix::DeletedBy::Other);
+				history->owner().notifyItemDataChange(item);
+				history->owner().requestItemRepaint(item);
+				continue;
+			}
 			item->destroy();
 			if (!history->chatListMessageKnown()) {
 				historiesToCheck.emplace(history);

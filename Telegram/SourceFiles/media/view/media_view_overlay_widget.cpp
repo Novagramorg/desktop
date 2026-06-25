@@ -68,6 +68,8 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "history/view/history_view_group_call_bar.h"
 #include "history/view/reactions/history_view_reactions_selector.h"
 #include "data/components/sponsored_messages.h"
+#include "data/data_story.h"
+#include "fenix/fenix_settings.h"
 #include "data/data_group_call.h"
 #include "data/data_session.h"
 #include "data/data_changes.h"
@@ -2101,6 +2103,19 @@ void OverlayWidget::fillContextMenuActions(
 				: &st::mediaMenuIconDownload));
 	}
 
+	// FenixUz: "Save story" — download any story regardless of the author's
+	// save restriction or the Premium gate, shown only when the normal save
+	// isn't already available to the user and the toggle is enabled.
+	if (story
+		&& Fenix::Get().storyDownload()
+		&& !story->canDownloadChecked()
+		&& !story->unsupported()) {
+		addAction(
+			tr::lng_fenix_save_story(tr::now),
+			[=] { saveAs(true); },
+			&st::mediaMenuIconDownload);
+	}
+
 	if (const auto overviewType = computeOverviewType()) {
 		const auto text = _document
 			? tr::lng_mediaview_files_all(tr::now)
@@ -2986,13 +3001,17 @@ void OverlayWidget::notifyFileDialogShown(bool shown) {
 	_helper->notifyFileDialogShown(shown);
 }
 
-void OverlayWidget::saveAs() {
-	if (showCopyMediaRestriction(true)) {
-		return;
-	} else if (hasCopyMediaRestriction()) {
-		Assert(_stories != nullptr);
-		showPremiumDownloadPromo();
-		return;
+void OverlayWidget::saveAs(bool force) {
+	// FenixUz: force skips both the author save-restriction and the Premium
+	// gate, letting "Save story" download any story (parity with Android).
+	if (!force) {
+		if (showCopyMediaRestriction(true)) {
+			return;
+		} else if (hasCopyMediaRestriction()) {
+			Assert(_stories != nullptr);
+			showPremiumDownloadPromo();
+			return;
+		}
 	}
 	QString file;
 	if (_document) {

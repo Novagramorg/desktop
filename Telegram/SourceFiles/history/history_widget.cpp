@@ -8,7 +8,9 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "history/history_widget.h"
 
 #include "api/api_editing.h"
+#include "api/api_text_entities.h"
 #include "api/api_bot.h"
+#include "fenix/auto_translate.h"
 #include "api/api_chat_participants.h"
 #include "api/api_global_privacy.h"
 #include "api/api_report.h"
@@ -202,6 +204,13 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 
 #include <QtGui/QWindow>
 #include <QtCore/QMimeData>
+#include <QtCore/QUrl>
+#include <QtCore/QJsonDocument>
+#include <QtCore/QJsonArray>
+#include <QtCore/QJsonParseError>
+#include <QtNetwork/QNetworkAccessManager>
+#include <QtNetwork/QNetworkReply>
+#include <QtNetwork/QNetworkRequest>
 
 namespace {
 
@@ -5026,6 +5035,8 @@ void HistoryWidget::send(Api::SendOptions options) {
 	} else if (_voiceRecordBar->isListenState()) {
 		_voiceRecordBar->requestToSendWithOptions(options);
 		return;
+	} else if (fenixAutoTranslateBeforeSend(options)) {
+		return;
 	}
 
 	sendTextWithTags(
@@ -5033,6 +5044,160 @@ void HistoryWidget::send(Api::SendOptions options) {
 		true,
 		options,
 		nullptr);
+}
+
+bool HistoryWidget::fenixAutoTranslateBeforeSend(Api::SendOptions options) {
+	if (_fenixTranslating) {
+		// A translation is already running — swallow extra Send taps.
+		return true;
+	} else if (_fenixSendOriginalOnce) {
+		// User asked to send the original after a failed translation.
+		_fenixSendOriginalOnce = false;
+		return false;
+	} else if (!_history || !_peer) {
+		return false;
+	}
+	const auto lang = Fenix::GetAutoTranslate().getLang(_peer->id);
+	if (lang.isEmpty()) {
+		return false;
+	}
+	auto textWithTags = _field->getTextWithAppliedMarkdown();
+	if (textWithTags.text.trimmed().isEmpty()) {
+		return false; // Nothing to translate (media-only / empty send).
+	}
+	auto source = TextWithEntities{
+		textWithTags.text,
+		TextUtilities::ConvertTextTagsToEntities(textWithTags.tags),
+	};
+
+	_fenixTranslating = true;
+	controller()->showToast(tr::lng_fenix_auto_translate_progress(tr::now));
+
+	const auto weak = base::make_weak(this);
+	// Google direct first — fast, but plain text only (formatting not kept).
+	// On any failure (rate-limit / blocked / empty) fall back to the Telegram
+	// server, which routes over the warm MTP connection and keeps entities.
+	fenixGoogleTranslate(source.text, lang, [=](std::optional<QString> google) {
+		const auto strong = weak.get();
+		if (!strong) {
+			return;
+		} else if (google && !google->trimmed().isEmpty()) {
+			strong->_fenixTranslating = false;
+			strong->sendTextWithTags(
+				{ *google, {} },
+				true,
+				options,
+				nullptr);
+		} else {
+			strong->fenixServerTranslate(source, lang, options);
+		}
+	});
+
+	return true;
+}
+
+void HistoryWidget::fenixGoogleTranslate(
+		QString text,
+		QString lang,
+		Fn<void(std::optional<QString>)> done) {
+	if (!_fenixTranslateNetwork) {
+		_fenixTranslateNetwork = std::make_unique<QNetworkAccessManager>();
+	}
+	// Free Google endpoint (same one the Android build uses): sl=auto lets
+	// Google detect the source server-side; dt=t returns the translation.
+	const auto url = u"https://translate.googleapis.com/translate_a/single"
+		"?client=gtx&sl=auto&dt=t&ie=UTF-8&oe=UTF-8&tl=%1&q=%2"_q
+		.arg(QString::fromLatin1(QUrl::toPercentEncoding(lang)))
+		.arg(QString::fromLatin1(QUrl::toPercentEncoding(text)));
+	const auto requestUrl = QUrl(url);
+	if (!requestUrl.isValid()) {
+		done(std::nullopt);
+		return;
+	}
+	auto request = QNetworkRequest(requestUrl);
+	request.setHeader(QNetworkRequest::ContentTypeHeader, "application/json");
+	request.setTransferTimeout(12000);
+	const auto reply = _fenixTranslateNetwork->get(request);
+	QObject::connect(reply, &QNetworkReply::finished, [=] {
+		auto result = std::optional<QString>();
+		if (reply->error() == QNetworkReply::NoError) {
+			// Response: [[["translated","source",...], ...], ...].
+			// Concatenate every segment[0] string in root[0].
+			auto parseError = QJsonParseError();
+			const auto doc = QJsonDocument::fromJson(
+				reply->readAll(),
+				&parseError);
+			if (parseError.error == QJsonParseError::NoError
+				&& doc.isArray()
+				&& !doc.array().isEmpty()
+				&& doc.array().at(0).isArray()) {
+				auto translated = QString();
+				for (const auto &segment : doc.array().at(0).toArray()) {
+					if (segment.isArray()
+						&& !segment.toArray().isEmpty()
+						&& segment.toArray().at(0).isString()) {
+						translated += segment.toArray().at(0).toString();
+					}
+				}
+				if (!translated.trimmed().isEmpty()) {
+					result = translated;
+				}
+			}
+		}
+		done(std::move(result));
+		reply->deleteLater();
+	});
+}
+
+void HistoryWidget::fenixServerTranslate(
+		TextWithEntities source,
+		QString lang,
+		Api::SendOptions options) {
+	const auto weak = base::make_weak(this);
+	auto text = QVector<MTPTextWithEntities>(1, MTP_textWithEntities(
+		MTP_string(source.text),
+		Api::EntitiesToMTP(
+			&session(),
+			source.entities,
+			Api::ConvertOption::SkipLocal)));
+	_api.request(MTPmessages_TranslateText(
+		MTP_flags(MTPmessages_TranslateText::Flag::f_text),
+		MTP_inputPeerEmpty(),
+		MTPVector<MTPint>(),
+		MTP_vector<MTPTextWithEntities>(std::move(text)),
+		MTP_string(lang),
+		MTPstring() // tone
+	)).done([=](const MTPmessages_TranslatedText &result) {
+		const auto strong = weak.get();
+		if (!strong) {
+			return;
+		}
+		strong->_fenixTranslating = false;
+		const auto &list = result.data().vresult().v;
+		if (list.isEmpty()) {
+			strong->fenixTranslateFailed();
+			return;
+		}
+		const auto &first = list.front().data();
+		strong->sendTextWithTags({
+			qs(first.vtext()),
+			TextUtilities::ConvertEntitiesToTextTags(
+				Api::EntitiesFromMTP(&strong->session(), first.ventities().v)),
+		}, true, options, nullptr);
+	}).fail([=](const MTP::Error &) {
+		const auto strong = weak.get();
+		if (!strong) {
+			return;
+		}
+		strong->_fenixTranslating = false;
+		strong->fenixTranslateFailed();
+	}).send();
+}
+
+void HistoryWidget::fenixTranslateFailed() {
+	// Don't silently send the wrong text — the next Send tap sends as-is.
+	_fenixSendOriginalOnce = true;
+	controller()->showToast(tr::lng_fenix_auto_translate_failed(tr::now));
 }
 
 void HistoryWidget::sendTextWithTags(

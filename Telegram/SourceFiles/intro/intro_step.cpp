@@ -468,15 +468,20 @@ void Step::paintCover(QPainter &p, int top) {
 	st::introCoverLeft.paint(p, left, coverHeight - st::introCoverLeft.height(), width());
 	st::introCoverRight.paint(p, width() - right - st::introCoverRight.width(), coverHeight - st::introCoverRight.height(), width());
 
-	auto planeLeft = (width() - st::introCoverIcon.width()) / 2 - st::introCoverIconLeft;
-	auto planeTop = top + st::introCoverIconTop;
-	if (top < 0 && !_hasCover) {
-		auto deltaLeft = -qRound(float64(st::introPlaneWidth / st::introPlaneHeight) * top);
-//		auto deltaTop = top;
-		planeLeft += deltaLeft;
-	//	planeTop += top;
-	}
-	st::introCoverIcon.paint(p, planeLeft, planeTop, width());
+	static const auto kFenixLogo = QImage(u":/gui/art/logo_256.png"_q);
+	const auto logoBox = st::introCoverIcon.height();
+	const auto logoPx = logoBox * style::DevicePixelRatio();
+	auto scaledLogo = kFenixLogo.scaled(
+		logoPx,
+		logoPx,
+		Qt::KeepAspectRatio,
+		Qt::SmoothTransformation);
+	scaledLogo.setDevicePixelRatio(style::DevicePixelRatio());
+	const auto drawW = scaledLogo.width() / style::DevicePixelRatio();
+	const auto drawH = scaledLogo.height() / style::DevicePixelRatio();
+	const auto logoLeft = (width() - drawW) / 2;
+	const auto logoTop = top + st::introCoverIconTop + (logoBox - drawH) / 2;
+	p.drawImage(logoLeft, logoTop, scaledLogo);
 }
 
 int Step::contentLeft() const {

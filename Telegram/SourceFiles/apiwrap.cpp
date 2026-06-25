@@ -70,6 +70,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "boxes/add_contact_box.h"
 #include "mtproto/mtproto_config.h"
 #include "history/history.h"
+#include "fenix/chat_preview_state.h"
 #include "history/history_item_components.h"
 #include "history/history_item_helpers.h"
 #include "main/main_session.h"
@@ -1374,6 +1375,10 @@ void ApiWrap::markContentsRead(
 		QVector<MTPint>>();
 	markedIds.reserve(items.size());
 	for (const auto &item : items) {
+		// FenixUz: ghost preview suppresses the "listened/watched" receipt.
+		if (Fenix::GetChatPreview().isPreview(item->history()->peer->id)) {
+			continue;
+		}
 		if (!item->markContentsRead(true) || !item->isRegular()) {
 			continue;
 		}
@@ -1399,6 +1404,10 @@ void ApiWrap::markContentsRead(
 }
 
 void ApiWrap::markContentsRead(not_null<HistoryItem*> item) {
+	// FenixUz: ghost preview suppresses the "listened/watched" receipt.
+	if (Fenix::GetChatPreview().isPreview(item->history()->peer->id)) {
+		return;
+	}
 	if (!item->markContentsRead(true) || !item->isRegular()) {
 		return;
 	}

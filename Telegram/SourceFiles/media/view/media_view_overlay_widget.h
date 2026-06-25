@@ -282,7 +282,9 @@ private:
 	void subscribeToScreenGeometry();
 
 	void toMessage();
-	void saveAs();
+	// FenixUz: force=true bypasses the copy/premium restriction checks so the
+	// "Save story" item can download any story (matches the Android fork).
+	void saveAs(bool force = false);
 	void downloadMedia();
 	void saveCancel();
 	void showInFolder();

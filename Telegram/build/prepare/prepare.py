@@ -1380,44 +1380,10 @@ depends:patches/breakpad.diff
 """)
 
 stage('breakpad', """
-    git clone https://chromium.googlesource.com/breakpad/breakpad
+win:
+    if not exist breakpad mkdir breakpad
     cd breakpad
-    git checkout dfcb7b6799
-depends:patches/breakpad.diff
-    git apply ../patches/breakpad.diff
-    git clone -b release-1.11.0 https://github.com/google/googletest src/testing
-win:
-    SET "PYTHONUTF8=1"
-    SET "FolderPostfix="
-win64:
-    SET "FolderPostfix=_x64"
-winarm:
-    SET "FolderPostfix=_ARM64"
-win:
-depends:python/Scripts/activate.bat
-    %THIRDPARTY_DIR%\\python\\Scripts\\activate.bat
-    cd src\\client\\windows
-    gyp --no-circular-check breakpad_client.gyp --format=ninja
-    cd ..\\..
-    ninja -C out/Debug%FolderPostfix% common crash_generation_client exception_handler
-release:
-    ninja -C out/Release%FolderPostfix% common crash_generation_client exception_handler
-    cd tools\\windows\\dump_syms
-    gyp dump_syms.gyp --format=msvs
-    msbuild -m dump_syms.vcxproj /property:Configuration=Release /property:Platform="x64"
-win:
-    deactivate
-mac:
-    git clone https://chromium.googlesource.com/linux-syscall-support src/third_party/lss
-    cd src/third_party/lss
-    git checkout e1e7b0ad8e
-    cd ../../..
-    cd src/client/mac
-    xcodebuild -project Breakpad.xcodeproj -target Breakpad -configuration Debug build
-release:
-    xcodebuild -project Breakpad.xcodeproj -target Breakpad -configuration Release build
-    cd ../../tools/mac/dump_syms
-    xcodebuild -project dump_syms.xcodeproj -target dump_syms -configuration Release build
+    echo Skipped because TDESKTOP_DISABLE_CRASH_REPORTS is ON for FenixUz. > SKIPPED.txt
 """)
 
 stage('crashpad', """

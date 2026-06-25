@@ -55,6 +55,10 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "ui/widgets/popup_menu.h"
 #include "ui/widgets/menu/menu_add_action_callback_factory.h"
 #include "ui/layers/generic_box.h"
+#include "ui/boxes/choose_language_box.h"
+#include "fenix/auto_translate.h"
+#include "fenix/chat_preview_state.h"
+#include "spellcheck/spellcheck_types.h"
 #include "ui/delayed_activation.h"
 #include "ui/vertical_list.h"
 #include "ui/controls/feature_list.h"
@@ -317,6 +321,8 @@ private:
 	void addToggleTopicClosed();
 	void addExportChat();
 	void addTranslate();
+	void addFenixAutoTranslate();
+	void addFenixChatPreview();
 	void addReport();
 	void addNewContact();
 	void addShareContact();
@@ -969,6 +975,66 @@ void Filler::addTranslate() {
 	_addAction(tr::lng_context_translate(tr::now), [=] {
 		history->peer->saveTranslationDisabled(false);
 	}, &st::menuIconTranslate);
+}
+
+void Filler::addFenixAutoTranslate() {
+	if (!_peer || _topic) {
+		return;
+	}
+	const auto peerId = _peer->id;
+	const auto controller = _controller;
+	const auto current = Fenix::GetAutoTranslate().getLang(peerId);
+	const auto enabled = !current.isEmpty();
+
+	const auto label = enabled
+		? tr::lng_fenix_auto_translate_on(
+			tr::now,
+			lt_lang,
+			Ui::LanguageNameTranslated(current))
+		: tr::lng_fenix_auto_translate(tr::now);
+	_addAction(label, [=] {
+		auto selected = enabled
+			? std::vector<LanguageId>{ LanguageId::FromName(current) }
+			: std::vector<LanguageId>();
+		controller->show(Box([=](not_null<Ui::GenericBox*> box) {
+			Ui::ChooseLanguageBox(
+				box,
+				tr::lng_fenix_auto_translate_choose(),
+				[=](std::vector<LanguageId> ids) {
+					// Empty list = the "Off" row → disable auto-translate.
+					Fenix::GetAutoTranslate().setLang(
+						peerId,
+						ids.empty()
+							? QString()
+							: ids.front().twoLetterCode());
+				},
+				selected,
+				false,
+				nullptr,
+				true); // addNone — show the "Off" row inside the picker.
+		}));
+	}, &st::menuIconTranslate);
+}
+
+void Filler::addFenixChatPreview() {
+	// Ghost preview: open a chat to read it without sending any read receipt
+	// (no blue checks, no "listened/watched"). Suppression is scoped to this
+	// peer and auto-clears the moment the user navigates to another chat.
+	if (!_peer || _topic || _sublist) {
+		return;
+	}
+	const auto peer = _peer;
+	const auto controller = _controller;
+	_addAction(tr::lng_fenix_chat_preview(tr::now), [=] {
+		Fenix::GetChatPreview().setActive(peer->id);
+		controller->activeChatChanges(
+		) | rpl::filter([=](const Dialogs::Key &key) {
+			return (key.peer() != peer);
+		}) | rpl::take(1) | rpl::on_next([=](const Dialogs::Key &) {
+			Fenix::GetChatPreview().clear();
+		}, controller->lifetime());
+		controller->showPeerHistory(peer);
+	}, &st::menuIconStealth);
 }
 
 void Filler::addReport() {
@@ -1742,6 +1808,7 @@ void Filler::fillContextMenuActions() {
 	}
 	addToggleMuteSubmenu(false);
 	addToggleUnreadMark();
+	addFenixChatPreview();
 	addToggleTopicClosed();
 	addToggleFolder();
 	if (const auto user = _peer->asUser()) {
@@ -1772,6 +1839,7 @@ void Filler::fillHistoryActions() {
 	addDirectMessages();
 	addExportChat();
 	addTranslate();
+	addFenixAutoTranslate();
 	addReport();
 	addClearHistory();
 	addDeleteChat();

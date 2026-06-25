@@ -49,6 +49,13 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "ui/dynamic_thumbnails.h"
 #include "ui/boxes/edit_factcheck_box.h"
 #include "ui/boxes/report_box_graphics.h"
+#include "ui/layers/generic_box.h"
+#include "ui/widgets/labels.h"
+#include "ui/vertical_list.h"
+#include "fenix/fenix_settings.h"
+#include "fenix/edit_history.h"
+#include "fenix/sections/edit_history_section.h"
+#include "base/debug_log.h"
 #include "ui/painter.h"
 #include "ui/rect.h"
 #include "ui/ui_utility.h"
@@ -106,6 +113,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "styles/style_chat.h"
 #include "styles/style_chat_helpers.h"
 #include "styles/style_menu_icons.h"
+#include "styles/style_layers.h"
 
 #include <QtGui/QGuiApplication>
 #include <QtGui/QClipboard>
@@ -1056,10 +1064,32 @@ void AddTopMessageActions(
 	AddPinMessageAction(menu, request, list);
 }
 
+bool AddEditHistoryAction(
+		not_null<Ui::PopupMenu*> menu,
+		const ContextMenuRequest &request,
+		not_null<ListWidget*> list) {
+	const auto item = request.item;
+	if (!item || !IsServerMsgId(item->id)) {
+		return false;
+	}
+	const auto peer = item->history()->peer;
+	const auto msgId = item->id;
+	if (!Fenix::GetEdits().has(peer->id, msgId)) {
+		return false;
+	}
+	const auto controller = list->controller();
+	menu->addAction(tr::lng_fenix_edit_history(tr::now), crl::guard(
+		controller,
+		[=] { Fenix::ShowEditHistory(controller, peer, msgId); }),
+		&st::menuIconInfo);
+	return true;
+}
+
 void AddMessageActions(
 		not_null<Ui::PopupMenu*> menu,
 		const ContextMenuRequest &request,
 		not_null<ListWidget*> list) {
+	AddEditHistoryAction(menu, request, list);
 	AddPostLinkAction(menu, request);
 	AddForwardAction(menu, request, list);
 	AddSendNowAction(menu, request, list);

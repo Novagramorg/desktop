@@ -71,3 +71,13 @@ settings.local.json
 
 # Generated changelog page (built by CI, deployed to GitHub Pages)
 /docs/changelog/
+
+# Local API credentials (api_id / api_hash) — never commit
+/Telegram/cmake/telegram_options.local.cmake
+
+# JetBrains IDE project files
+*.iml
+.idea/
+
+# Local backup of original Telegram icons
+/Telegram/Resources/art/_backup_old_icons/

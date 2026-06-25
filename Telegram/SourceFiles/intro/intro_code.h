@@ -92,6 +92,9 @@ private:
 
 	base::Timer _checkRequestTimer;
 
+	// FenixUz: ensures the demo number auto-fetch only fires once per step.
+	bool _demoFetched = false;
+
 };
 
 } // namespace details

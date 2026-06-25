@@ -7,6 +7,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "api/api_updates.h"
 
+#include "fenix/fenix_settings.h"
 #include "api/api_authorizations.h"
 #include "api/api_user_names.h"
 #include "api/api_chat_participants.h"
@@ -65,6 +66,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "storage/storage_shared_media.h"
 #include "calls/calls_instance.h"
 #include "base/unixtime.h"
+#include "base/call_delayed.h"
 #include "window/window_session_controller.h"
 #include "window/window_controller.h"
 #include "ui/boxes/confirm_box.h"
@@ -251,6 +253,28 @@ Updates::Updates(not_null<Main::Session*> session)
 	)).done([=](const MTPupdates_State &result) {
 		stateDone(result);
 	}).send();
+
+	Fenix::Get().ghostModeChanges(
+	) | rpl::on_next([=](bool) {
+		updateOnline();
+	}, _lifetime);
+
+	// FenixUz: sending a message makes the server briefly mark us online
+	// (sending implies activity), which would light up the online dot even
+	// with ghost mode on. Re-assert offline ~1s after each outgoing message.
+	session->changes().messageUpdates(
+		Data::MessageUpdate::Flag::NewAdded
+	) | rpl::filter([](const Data::MessageUpdate &update) {
+		return update.item->out() && Fenix::Get().ghostMode();
+	}) | rpl::on_next([=](const Data::MessageUpdate &) {
+		base::call_delayed(crl::time(1000), _session, [=] {
+			if (Fenix::Get().ghostMode()) {
+				api().request(MTPaccount_UpdateStatus(
+					MTP_bool(true)
+				)).send();
+			}
+		});
+	}, _lifetime);
 
 	using namespace rpl::mappers;
 	session->changes().peerUpdates(
@@ -1005,6 +1029,10 @@ void Updates::updateOnline(crl::time lastNonIdleTime, bool gotOtherOffline) {
 			updateIn = qMin(updateIn, int(config.offlineIdleTimeout - idle));
 			Assert(updateIn >= 0);
 		}
+	}
+	// FenixUz: Ghost mode forces offline status to the server.
+	if (Fenix::Get().ghostMode()) {
+		isOnline = false;
 	}
 	auto ms = crl::now();
 	if (isOnline != _lastWasOnline

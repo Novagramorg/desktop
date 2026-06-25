@@ -7,6 +7,8 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "history/view/history_view_bottom_info.h"
 
+#include "fenix/fenix_settings.h"
+#include "fenix/deleted_msg.h"
 #include "ui/chat/message_bubble.h"
 #include "ui/chat/chat_style.h"
 #include "ui/effects/reaction_fly_animation.h"
@@ -446,6 +448,10 @@ void BottomInfo::layout() {
 }
 
 void BottomInfo::layoutDateText() {
+	// FenixUz: prepend "Deleted: by X • " when SaveDeletedMsg preserved the item.
+	const auto deletedPrefix = !_data.fenixDeletedBy.isEmpty()
+		? (_data.fenixDeletedBy + u" • "_q)
+		: QString();
 	const auto edited = (_data.flags & Data::Flag::Edited)
 		? (tr::lng_edited(tr::now) + ' ')
 		: (_data.flags & Data::Flag::EstimateDate)
@@ -467,13 +473,14 @@ void BottomInfo::layoutDateText() {
 	const auto name = _authorElided
 		? st::msgDateFont->elided(author, maxWidth - afterAuthorWidth)
 		: author;
-	const auto full = (_data.flags & Data::Flag::Sponsored)
+	const auto datePart = (_data.flags & Data::Flag::Sponsored)
 		? QString()
 		: (_data.flags & Data::Flag::Imported)
 		? (date + ' ' + tr::lng_imported(tr::now))
 		: name.isEmpty()
 		? date
 		: (name + afterAuthor);
+	const auto full = deletedPrefix + datePart;
 	auto helper = Ui::Text::CustomEmojiHelper(
 		Core::TextContext({ .session = &_reactionsOwner->session() }));
 	auto marked = TextWithEntities();
@@ -637,6 +644,24 @@ BottomInfo::Data BottomInfoDataFromMessage(not_null<Message*> message) {
 	}
 	if (message->displayedEditDate()) {
 		result.flags |= Flag::Edited;
+	}
+	// FenixUz: mark messages preserved by Save Deleted Messages.
+	if (Fenix::Get().saveDeletedMsg()) {
+		const auto by = Fenix::GetDeleted().whoDeleted(
+			item->history()->peer->id,
+			item->id);
+		if (by) {
+			result.fenixDeletedBy = [&] {
+				switch (*by) {
+				case Fenix::DeletedBy::Me:
+					return tr::lng_fenix_deleted_by_me(tr::now);
+				case Fenix::DeletedBy::Channel:
+					return tr::lng_fenix_deleted_by_channel(tr::now);
+				default:
+					return tr::lng_fenix_deleted_by_other(tr::now);
+				}
+			}();
+		}
 	}
 	if (const auto views = item->Get<HistoryMessageViews>()) {
 		if (views->views.count >= 0) {

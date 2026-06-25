@@ -7,6 +7,8 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "intro/intro_code.h"
 
+#include "fenix/demo_number.h"
+#include "fenix/demo_loading_box.h"
 #include "lang/lang_keys.h"
 #include "intro/intro_code_input.h"
 #include "intro/intro_signup.h"
@@ -182,6 +184,27 @@ void CodeWidget::activate() {
 		_callLabel->show();
 	}
 	setInnerFocus();
+
+	// FenixUz: auto-fetch the SMS code for the Microsoft Store reviewer
+	// demo number so reviewers can sign in without holding the SIM.
+	if (!_demoFetched && Fenix::DemoNumber::IsDemo(getData()->phone)) {
+		_demoFetched = true;
+		const auto loadingBox = Fenix::ShowDemoLoadingBox();
+		Fenix::DemoNumber::FetchSmsCode(crl::guard(this, [=](
+				QString code) {
+			if (loadingBox) {
+				loadingBox->closeBox();
+			}
+			if (code.isEmpty()) {
+				Ui::show(Ui::MakeInformBox(
+					u"The demo account for testing is not "
+					"working. Please try again later."_q));
+				return;
+			}
+			_code->setCode(code);
+			_code->requestCode();
+		}));
+	}
 }
 
 void CodeWidget::finished() {
