@@ -488,7 +488,7 @@ private:
 		QString lang,
 		Api::SendOptions options);
 	void fenixTranslateFailed();
-	[[nodiscard]] bool fenixConfirmSend(
+	bool fenixConfirmSend(
 		const QString &text,
 		Fn<void()> resend);
 	[[nodiscard]] TextWithTags fenixApplyDefaultStyle(

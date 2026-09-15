@@ -336,6 +336,9 @@ const auto kMeta = BuildHelper({
 	.title = &tr::lng_fenix_features,
 	.icon = &st::menuIconShowInFolder,
 }, [](SectionBuilder &builder) {
+	if (!builder.container()) {
+		return;
+	}
 	BuildSaveDeletedMsgRow(builder);
 	BuildSaveEditHistoryRow(builder);
 	BuildStopAutoDownloadRow(builder);

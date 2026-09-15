@@ -53,9 +53,13 @@ void JoinOne(
 			}
 			session->api().request(MTPchannels_JoinChannel(
 				channel->inputChannel()
-			)).done([=](const MTPUpdates &updates) {
-				session->api().applyUpdates(updates);
-				finished(true);
+			)).done([=](const MTPmessages_ChatInviteJoinResult &result) {
+				result.match([&](const MTPDmessages_chatInviteJoinResultOk &data) {
+					session->api().applyUpdates(data.vupdates());
+					finished(true);
+				}, [&](const MTPDmessages_chatInviteJoinResultWebView &) {
+					finished(false);
+				});
 			}).fail([=](const MTP::Error &error) {
 				finished(error.type() == u"USER_ALREADY_PARTICIPANT"_q);
 			}).send();

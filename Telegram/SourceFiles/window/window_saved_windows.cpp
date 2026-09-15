@@ -21,6 +21,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "data/data_thread.h"
 #include "data/data_user.h"
 #include "dialogs/ui/restore_windows_offer.h"
+#include "fenix/chat_lock.h"
 #include "history/history.h"
 #include "history/admin_log/history_admin_log_section.h"
 #include "history/view/history_view_chat_section.h"
@@ -1528,6 +1529,11 @@ void SavedWindows::replayChats(
 	for (auto i = 0; i != count; ++i) {
 		const auto thread = step.slots[1 + i];
 		if (!thread || !SeparateWindowThreadAvailable(SeparateId(thread))) {
+			continue;
+		}
+		const auto lockedPeerId = thread->peer()->id;
+		if (Fenix::GetChatLock().isLocked(lockedPeerId)
+			&& !Fenix::GetChatLock().isUnlocked(lockedPeerId)) {
 			continue;
 		}
 		const auto &saved = step.data.chats[i];

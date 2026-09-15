@@ -149,7 +149,7 @@ void PhoneWidget::setupBotLogin() {
 	}, botLogin->lifetime());
 
 	botLogin->setClickedCallback([=] {
-		goReplace<BotWidget>(Animate::Forward);
+		goNextOrBack<BotWidget>();
 	});
 }
 

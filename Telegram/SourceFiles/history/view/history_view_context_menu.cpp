@@ -687,7 +687,9 @@ bool AddSpecialForwardMessageAction(
 	const auto item = request.item;
 	if (!request.selectedItems.empty()) {
 		return false;
-	} else if (!item || !item->allowsForward()) {
+	} else if (!item
+		|| !item->allowsForward()
+		|| IsAnchoredEphemeral(item)) {
 		return false;
 	}
 	const auto owner = &item->history()->owner();

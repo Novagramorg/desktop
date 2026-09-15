@@ -11079,7 +11079,7 @@ void HistoryWidget::specialForwardSelected() {
 	const auto weak = base::make_weak(this);
 	// Novagram "Special forward": forward the selection hiding the senders.
 	Window::ShowForwardMessagesBox(controller(), Data::ForwardDraft{
-		.ids = getSelectedItems(),
+		.ids = _list->getSelectedForwardItems(),
 		.options = Data::ForwardOptions::NoSenderNames,
 	}, [=] {
 		if (const auto strong = weak.get()) {
