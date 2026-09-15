@@ -223,6 +223,13 @@ Stories::~Stories() {
 	Expects(_pollingViews.empty());
 }
 
+void Stories::clear() {
+	_pollingSettings.clear();
+	_pollingViews.clear();
+	_stories.clear();
+	_deletingStories.clear();
+}
+
 Session &Stories::owner() const {
 	return *_owner;
 }
@@ -2229,7 +2236,7 @@ bool Stories::canTogglePinnedList(
 		return false;
 	}
 
-	auto &already = i->second.ids.pinnedToTop;
+	const auto &already = i->second.ids.pinnedToTop;
 	auto count = int(already.size());
 	for (const auto &id : ids) {
 		if (!ranges::contains(already, id.story)) {

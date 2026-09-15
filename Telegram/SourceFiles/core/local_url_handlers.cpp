@@ -73,7 +73,10 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "inline_bots/bot_attach_web_view.h"
 #include "history/history.h"
 #include "history/history_item.h"
+#include "iv/iv_instance.h"
 #include "apiwrap.h"
+
+#include "styles/style_chat_helpers.h"
 
 #include <QtGui/QGuiApplication>
 
@@ -438,6 +441,23 @@ bool ApplyMtprotoProxy(
 	return true;
 }
 
+bool ApplyWebProxy(
+		Window::SessionController *controller,
+		const Match &match,
+		const QVariant &context) {
+	auto params = url_parse_params(
+		match->captured(1),
+		qthelp::UrlParamNameTransform::ToLower);
+	ProxiesBoxController::ShowApplyConfirmation(
+		controller,
+		MTP::ProxyData::Type::Web,
+		params);
+	if (controller) {
+		controller->window().activate();
+	}
+	return true;
+}
+
 bool ShowPassportForm(
 		Window::SessionController *controller,
 		const QMap<QString, QString> &params) {
@@ -530,6 +550,8 @@ bool ShowWallPaper(
 			result |= ChatAdminRight::ManageCall;
 		} else if (element == u"manage_direct_messages"_q) {
 			result |= ChatAdminRight::ManageDirect;
+		} else if (element == u"manage_welcome_messages"_q) {
+			result |= ChatAdminRight::ManageWelcomeMessages;
 		} else if (element == u"anonymous"_q) {
 			result |= ChatAdminRight::Anonymous;
 		} else if (element == u"manage_chat"_q) {
@@ -865,7 +887,11 @@ bool ShowInviteLink(
 		return false;
 	}
 	QGuiApplication::clipboard()->setText(link);
-	controller->showToast(tr::lng_group_invite_copied(tr::now));
+	controller->showToast({
+		.text = { tr::lng_group_invite_copied(tr::now) },
+		.iconLottie = u"toast/voip_invite"_q,
+		.iconLottieSize = st::toastLottieIconSize,
+	});
 	return true;
 }
 
@@ -884,7 +910,11 @@ bool CopyPeerId(
 		const QVariant &context) {
 	TextUtilities::SetClipboardText({ match->captured(1) });
 	if (controller) {
-		controller->showToast(u"ID copied to clipboard."_q);
+		controller->showToast({
+			.text = { u"ID copied to clipboard."_q },
+			.iconLottie = u"toast/copy"_q,
+			.iconLottieSize = st::toastLottieIconSize,
+		});
 	}
 	return true;
 }
@@ -1157,7 +1187,11 @@ bool ShowCollectibleUsername(
 				TextUtilities::SetClipboardText({
 					strong->session().createInternalLinkFull(username)
 				});
-				strong->showToast(tr::lng_username_copied(tr::now));
+				strong->showToast({
+					.text = { tr::lng_username_copied(tr::now) },
+					.iconLottie = u"toast/voip_invite"_q,
+					.iconLottieSize = st::toastLottieIconSize,
+				});
 			}
 		}
 	});
@@ -1175,7 +1209,11 @@ bool CopyUsernameLink(
 	TextUtilities::SetClipboardText({
 		controller->session().createInternalLinkFull(username)
 	});
-	controller->showToast(tr::lng_username_copied(tr::now));
+	controller->showToast({
+		.text = { tr::lng_username_copied(tr::now) },
+		.iconLottie = u"toast/voip_invite"_q,
+		.iconLottieSize = st::toastLottieIconSize,
+	});
 	return true;
 }
 
@@ -1188,7 +1226,11 @@ bool CopyUsername(
 	}
 	const auto username = match->captured(1);
 	TextUtilities::SetClipboardText({ '@' + username });
-	controller->showToast(tr::lng_username_text_copied(tr::now));
+	controller->showToast({
+		.text = { tr::lng_username_text_copied(tr::now) },
+		.iconLottie = u"toast/copy"_q,
+		.iconLottieSize = st::toastLottieIconSize,
+	});
 	return true;
 }
 
@@ -1375,7 +1417,11 @@ void ExportTestChatTheme(
 		const auto slug = Data::CloudTheme::Parse(session, result, true).slug;
 		QGuiApplication::clipboard()->setText(
 			session->createInternalLinkFull("addtheme/" + slug));
-		show->showToast(tr::lng_background_link_copied(tr::now));
+		show->showToast({
+			.text = { tr::lng_background_link_copied(tr::now) },
+			.iconLottie = u"toast/voip_invite"_q,
+			.iconLottieSize = st::toastLottieIconSize,
+		});
 	}).fail([=](const MTP::Error &error) {
 		show->showToast(u"Error: "_q + error.type());
 	}).send();
@@ -1724,6 +1770,10 @@ const std::vector<LocalUrlHandler> &LocalUrlHandlers() {
 			ApplyMtprotoProxy
 		},
 		{
+			u"^webproxy/?\\?(.+)(#|$)"_q,
+			ApplyWebProxy
+		},
+		{
 			u"^passport/?\\?(.+)(#|$)"_q,
 			ShowPassport
 		},
@@ -1788,7 +1838,7 @@ const std::vector<LocalUrlHandler> &LocalUrlHandlers() {
 			ResolveStarsSettings
 		},
 		{
-			u"^ton/?(^\\?.*)?(#|$)"_q,
+			u"^(ton|grams)/?(^\\?.*)?(#|$)"_q,
 			ResolveTonSettings
 		},
 		{
@@ -1943,6 +1993,11 @@ QString TryConvertUrlToLocal(QString url) {
 			return u"tg://socks?"_q + socksMatch->captured(1);
 		} else if (const auto proxyMatch = regex_match(u"^proxy/?\\?(.+)(#|$)"_q, query, matchOptions)) {
 			return u"tg://proxy?"_q + proxyMatch->captured(1);
+		} else if (const auto webproxyMatch = regex_match(
+				u"^webproxy/?\\?(.+)(#|$)"_q,
+				query,
+				matchOptions)) {
+			return u"tg://webproxy?"_q + webproxyMatch->captured(1);
 		} else if (const auto invoiceMatch = regex_match(u"^(invoice/|\\$)([a-zA-Z0-9_\\-]+)(\\?|#|$)"_q, query, matchOptions)) {
 			return u"tg://invoice?slug="_q + invoiceMatch->captured(2);
 		} else if (const auto bgMatch = regex_match(u"^bg/([a-zA-Z0-9\\.\\_\\-\\~]+)(\\?(.+)?)?$"_q, query, matchOptions)) {
@@ -2044,6 +2099,20 @@ QString TryConvertUrlToLocal(QString url) {
 		}
 	}
 	return url;
+}
+
+bool IsMiniAppUrl(const QString &url) {
+	const auto local = TryConvertUrlToLocal(url);
+	const auto prefix = u"tg://resolve?"_q;
+	if (!local.startsWith(prefix, Qt::CaseInsensitive)) {
+		return false;
+	}
+	const auto params = qthelp::url_parse_params(
+		local.mid(prefix.size()),
+		qthelp::UrlParamNameTransform::ToLower);
+	return params.contains(u"appname"_q)
+		|| params.contains(u"startapp"_q)
+		|| params.contains(u"attach"_q);
 }
 
 struct InternalLinkCheckResult {

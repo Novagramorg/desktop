@@ -8,6 +8,8 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #pragma once
 
 #include "base/unique_qptr.h"
+#include "base/weak_ptr.h"
+#include "ui/effects/animations.h"
 
 #include <QImage>
 
@@ -20,7 +22,7 @@ namespace Ui {
 
 class ThanosEffectRenderer;
 
-class ThanosEffect final {
+class ThanosEffect final : public base::has_weak_ptr {
 public:
 	explicit ThanosEffect(not_null<QWidget*> parent);
 	~ThanosEffect();
@@ -35,6 +37,7 @@ public:
 	void raise();
 
 	[[nodiscard]] static bool Supported();
+	[[nodiscard]] static bool WindowVisible(QWidget *window);
 	// Runs the (potentially slow, 10–300ms) QRhi capability probe
 	// synchronously on the main thread and caches the result. Safe to
 	// call multiple times. If not called, `Supported()` will lazily
@@ -46,15 +49,16 @@ private:
 	void ensureSurface();
 	void showSurface();
 	void hideSurface();
-	void startUpdateTimer();
-	void stopUpdateTimer();
+	void finishNow();
+	[[nodiscard]] QWidget *surfaceWidget() const;
 
 	const not_null<QWidget*> _parent;
 
 	std::unique_ptr<RpWidgetWrap> _surface;
 	[[maybe_unused]] ThanosEffectRenderer *_renderer = nullptr;
+	bool _shown = false;
 
-	QTimer *_updateTimer = nullptr;
+	Ui::Animations::Basic _animation;
 
 	rpl::event_stream<> _allDone;
 	rpl::lifetime _lifetime;

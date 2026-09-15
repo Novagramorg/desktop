@@ -26,7 +26,8 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "data/data_peer_values.h"
 #include "data/data_document.h"
 #include "data/data_saved_sublist.h"
-#include "styles/style_info.h"
+#include "storage/storage_facade.h"
+#include "storage/storage_shared_media.h"
 #include "styles/style_overview.h"
 
 namespace Info::Media {
@@ -131,6 +132,7 @@ bool Provider::sectionHasFloatingHeader() {
 	case Type::Photo:
 	case Type::GIF:
 	case Type::Video:
+	case Type::PhotoVideo:
 	case Type::RoundFile:
 	case Type::RoundVoiceFile:
 	case Type::MusicFile:
@@ -147,6 +149,7 @@ QString Provider::sectionTitle(not_null<const BaseLayout*> item) {
 	case Type::Photo:
 	case Type::GIF:
 	case Type::Video:
+	case Type::PhotoVideo:
 	case Type::RoundFile:
 	case Type::RoundVoiceFile:
 	case Type::File:
@@ -171,6 +174,7 @@ bool Provider::sectionItemBelongsHere(
 	case Type::Photo:
 	case Type::GIF:
 	case Type::Video:
+	case Type::PhotoVideo:
 	case Type::RoundFile:
 	case Type::RoundVoiceFile:
 	case Type::File:
@@ -367,10 +371,20 @@ void Provider::jumpToMessage(
 		return;
 	}
 
+	const auto finish = [=] {
+		const auto fullId = FullMsgId(_peer->id, messageId);
+		_universalAroundId = GetUniversalId(fullId);
+		if (callback) {
+			callback(fullId);
+		}
+		_idsLimit = kMinimalIdsLimit * 2;
+		refreshViewer();
+	};
+
 	_controller->session().api().request(
 		std::move(*request)
 	).done([=](const Api::SearchRequestResult &result) {
-		const auto parsed = Api::ParseSearchResult(
+		auto parsed = Api::ParseSearchResult(
 			peer,
 			_type,
 			messageId,
@@ -378,15 +392,24 @@ void Provider::jumpToMessage(
 			result);
 
 		if (!parsed.messageIds.empty()) {
-			const auto fullId = FullMsgId(_peer->id, messageId);
-			_universalAroundId = GetUniversalId(fullId);
-			if (callback) {
-				callback(fullId);
-			}
-			_idsLimit = kMinimalIdsLimit * 2;
-			refreshViewer();
+			peer->session().storage().add(Storage::SharedMediaAddSlice(
+				peer->id,
+				_topicRootId,
+				_monoforumPeerId,
+				_type,
+				std::move(parsed.messageIds),
+				parsed.noSkipRange,
+				parsed.fullCount));
 		}
+		finish();
+	}).fail([=] {
+		finish();
 	}).send();
+}
+
+bool Provider::anchorWhileAtTop() {
+	const auto after = _slice.skippedAfter();
+	return !after || (*after > 0);
 }
 
 SparseIdsMergedSlice::Key Provider::sliceKey(
@@ -414,9 +437,17 @@ SparseIdsMergedSlice::Key Provider::sliceKey(
 
 void Provider::itemRemoved(not_null<const HistoryItem*> item) {
 	const auto id = GetUniversalId(item);
-	if (const auto i = _layouts.find(id); i != end(_layouts)) {
-		_layoutRemoved.fire(i->second.item.get());
-		_layouts.erase(i);
+	const auto i = _layouts.find(id);
+	if (i == end(_layouts)) {
+		return;
+	}
+	_layoutRemoved.fire(i->second.item.get());
+	// The list widget handles layoutRemoved() synchronously and may
+	// refresh its height from there, which can reach refreshViewer()
+	// -> refreshRows() -> fillSections() -> clearStaleLayouts() before
+	// we get back here, erasing this very entry, so look it up again.
+	if (const auto j = _layouts.find(id); j != end(_layouts)) {
+		_layouts.erase(j);
 	}
 }
 
@@ -494,6 +525,13 @@ std::unique_ptr<BaseLayout> Provider::createLayout(
 		return nullptr;
 	case Type::Video:
 		if (const auto file = getFile()) {
+			return std::make_unique<Video>(delegate, item, file, options());
+		}
+		return nullptr;
+	case Type::PhotoVideo:
+		if (const auto photo = getPhoto()) {
+			return std::make_unique<Photo>(delegate, item, photo, options());
+		} else if (const auto file = getFile()) {
 			return std::make_unique<Video>(delegate, item, file, options());
 		}
 		return nullptr;
