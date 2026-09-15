@@ -8784,6 +8784,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 "lng_fenix_auto_translate_choose" = "Translate messages to";
 "lng_fenix_auto_translate_progress" = "Translating…";
 "lng_fenix_auto_translate_failed" = "Couldn't translate. Tap Send again to send the original.";
+"lng_fenix_auto_translate_rich" = "Auto-translate doesn't work for rich messages. Tap Send again to send without translation.";
 "lng_fenix_save_story" = "Save story";
 "lng_fenix_story_download" = "Download Any Story";
 "lng_fenix_story_download_about" = "Adds a 'Save story' item to the story viewer menu, letting you download anyone's story regardless of Premium or the author's save restriction.";

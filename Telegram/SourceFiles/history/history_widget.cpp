@@ -5678,7 +5678,10 @@ void HistoryWidget::send(Api::SendOptions options) {
 		saveEditMessage({});
 		return;
 	} else if (const auto page = shownRichMessage()) {
-		sendRichDraft(page, options);
+		if (fenixWarnRichAutoTranslate()) {
+			return;
+		}
+		sendRichDraft(fenixAppendAutoTextToRich(page), options);
 		return;
 	}
 	if (!options.scheduled) {
@@ -5925,6 +5928,48 @@ TextWithTags HistoryWidget::fenixAppendAutoText(
 		textWithTags.tags.push_back(tag);
 	}
 	return textWithTags;
+}
+
+auto HistoryWidget::fenixAppendAutoTextToRich(
+		std::shared_ptr<const Iv::RichPage> page) const
+-> std::shared_ptr<const Iv::RichPage> {
+	if (!_peer || !page) {
+		return page;
+	}
+	const auto signature = Fenix::GetAutoText().get(_peer->id);
+	if (signature.text.trimmed().isEmpty()) {
+		return page;
+	}
+	const auto keepFormatting = session().premium()
+		|| Iv::RichPageUsesPremiumFormatting(*page);
+	auto blocks = keepFormatting
+		? Iv::SplitTextIntoRichPage(signature).blocks
+		: Iv::SplitTextIntoRichPage(
+			TextWithEntities{ signature.text }).blocks;
+	if (blocks.empty()) {
+		return page;
+	}
+	auto result = std::make_shared<Iv::RichPage>(*page);
+	result->blocks.insert(
+		end(result->blocks),
+		std::make_move_iterator(begin(blocks)),
+		std::make_move_iterator(end(blocks)));
+	const auto limits = Iv::ResolveRichMessageLimits(&session());
+	if (Iv::ValidateRichMessage(*result, limits)) {
+		return page;
+	}
+	return result;
+}
+
+bool HistoryWidget::fenixWarnRichAutoTranslate() {
+	if (!_peer || Fenix::GetAutoTranslate().getLang(_peer->id).isEmpty()) {
+		return false;
+	} else if (base::take(_fenixRichTranslateWarnedPeer) == _peer->id) {
+		return false;
+	}
+	_fenixRichTranslateWarnedPeer = _peer->id;
+	controller()->showToast(tr::lng_fenix_auto_translate_rich(tr::now));
+	return true;
 }
 
 void HistoryWidget::sendRichDraft(

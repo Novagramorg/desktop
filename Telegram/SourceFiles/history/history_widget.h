@@ -495,6 +495,10 @@ private:
 		TextWithTags textWithTags) const;
 	[[nodiscard]] TextWithTags fenixAppendAutoText(
 		TextWithTags textWithTags) const;
+	[[nodiscard]] auto fenixAppendAutoTextToRich(
+		std::shared_ptr<const Iv::RichPage> page) const
+	-> std::shared_ptr<const Iv::RichPage>;
+	[[nodiscard]] bool fenixWarnRichAutoTranslate();
 	void sendWithModifiers(Qt::KeyboardModifiers modifiers);
 	void sendScheduled(Api::SendOptions initialOptions);
 	[[nodiscard]] SendMenu::Details sendButtonMenuDetails() const;
@@ -1043,6 +1047,7 @@ private:
 	// Novagram: outgoing auto-translate state.
 	bool _fenixTranslating = false;
 	bool _fenixSendOriginalOnce = false;
+	PeerId _fenixRichTranslateWarnedPeer = PeerId(0);
 	std::unique_ptr<QNetworkAccessManager> _fenixTranslateNetwork;
 	bool _fenixVoiceConfirmed = false;
 	bool _fenixDocConfirmed = false;
