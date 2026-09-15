@@ -9,6 +9,7 @@ This file is part of Novagram Desktop, a fork of Telegram Desktop by Vipads LLC.
 #include "ui/widgets/fields/input_field.h"
 #include "styles/style_layers.h"
 #include "styles/style_boxes.h"
+#include "styles/style_share_box.h"
 
 namespace Fenix {
 

@@ -30,6 +30,7 @@ This file is part of Novagram Desktop, a fork of Telegram Desktop by Vipads LLC.
 #include "window/window_session_controller.h"
 #include "styles/style_menu_icons.h"
 #include "styles/style_settings.h"
+#include "styles/style_share_box.h"
 #include "styles/style_widgets.h"
 
 namespace Settings {

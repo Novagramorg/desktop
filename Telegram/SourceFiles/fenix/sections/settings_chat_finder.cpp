@@ -21,6 +21,7 @@ This file is part of Novagram Desktop, a fork of Telegram Desktop by Vipads LLC.
 #include "ui/wrap/vertical_layout.h"
 #include "window/window_session_controller.h"
 #include "window/window_session_controller_link_info.h"
+#include "styles/style_api_chat_invite.h"
 #include "styles/style_boxes.h"
 #include "styles/style_layers.h"
 #include "styles/style_widgets.h"
