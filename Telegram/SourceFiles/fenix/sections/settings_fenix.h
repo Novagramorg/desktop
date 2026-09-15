@@ -1,7 +1,7 @@
 /*
-This file is part of FenixUz Desktop, a fork of Telegram Desktop by Vipads LLC.
+This file is part of Novagram Desktop, a fork of Telegram Desktop by Vipads LLC.
 
-"FenixUz Features" settings section — equivalent of Android CommonMenu.
+"Novagram Features" settings section — equivalent of Android CommonMenu.
 */
 #pragma once
 

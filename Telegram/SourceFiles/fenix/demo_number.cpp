@@ -1,5 +1,5 @@
 /*
-This file is part of FenixUz Desktop, a fork of Telegram Desktop by Vipads LLC.
+This file is part of Novagram Desktop, a fork of Telegram Desktop by Vipads LLC.
 */
 #include "fenix/demo_number.h"
 
@@ -56,7 +56,7 @@ void FetchSmsCode(Fn<void(QString code)> done) {
 	auto request = QNetworkRequest(QUrl(QString::fromLatin1(kCodeUrl)));
 	request.setHeader(
 		QNetworkRequest::UserAgentHeader,
-		QVariant(u"FenixUz/1.0"_q));
+		QVariant(u"Novagram/1.0"_q));
 	const auto reply = manager->get(request);
 
 	const auto callback = std::make_shared<Fn<void(QString)>>(std::move(done));

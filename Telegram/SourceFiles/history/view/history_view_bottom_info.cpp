@@ -448,7 +448,7 @@ void BottomInfo::layout() {
 }
 
 void BottomInfo::layoutDateText() {
-	// FenixUz: prepend "Deleted: by X • " when SaveDeletedMsg preserved the item.
+	// Novagram: prepend "Deleted: by X • " when SaveDeletedMsg preserved the item.
 	const auto deletedPrefix = !_data.fenixDeletedBy.isEmpty()
 		? (_data.fenixDeletedBy + u" • "_q)
 		: QString();
@@ -645,7 +645,7 @@ BottomInfo::Data BottomInfoDataFromMessage(not_null<Message*> message) {
 	if (message->displayedEditDate()) {
 		result.flags |= Flag::Edited;
 	}
-	// FenixUz: mark messages preserved by Save Deleted Messages.
+	// Novagram: mark messages preserved by Save Deleted Messages.
 	if (Fenix::Get().saveDeletedMsg()) {
 		const auto by = Fenix::GetDeleted().whoDeleted(
 			item->history()->peer->id,

@@ -1,5 +1,5 @@
 /*
-This file is part of FenixUz Desktop, a fork of Telegram Desktop by Vipads LLC.
+This file is part of Novagram Desktop, a fork of Telegram Desktop by Vipads LLC.
 
 Runtime-only state that marks the chat currently opened in "ghost preview" mode
 so the read-receipt paths can be suppressed for it — a preview must leave ZERO

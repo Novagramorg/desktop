@@ -1163,7 +1163,7 @@ private:
 #endif // Q_OS_MAC
 	HistoryView::DoubleClickQuickAction _chatQuickAction
 		= HistoryView::DoubleClickQuickAction();
-	bool _translateButtonEnabled = false;
+	bool _translateButtonEnabled = true; // Novagram: per-message Translate on by default.
 	bool _usePlatformTranslation = false;
 	rpl::variable<bool> _translateChatEnabled = true;
 	rpl::variable<int> _translateToRaw = 0;

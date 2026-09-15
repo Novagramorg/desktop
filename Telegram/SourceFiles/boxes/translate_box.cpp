@@ -92,9 +92,9 @@ bool SkipTranslate(TextWithEntities textWithEntities) {
 	if (text.isEmpty()) {
 		return true;
 	}
-	if (!Core::App().settings().translateButtonEnabled()) {
-		return true;
-	}
+	// Novagram: the per-message "Translate" item is shown by default for chats
+	// and groups, without requiring the Settings > Language toggle. (Upstream
+	// gated this on settings().translateButtonEnabled() here.)
 	constexpr auto kFirstChunk = size_t(100);
 	auto hasLetters = (text.size() >= kFirstChunk);
 	for (auto i = 0; i < kFirstChunk; i++) {

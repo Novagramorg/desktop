@@ -503,7 +503,8 @@ public:
 	TTLButton(
 		not_null<Ui::RpWidget*> parent,
 		const style::RecordBar &st,
-		bool recordingVideo);
+		bool recordingVideo,
+		bool startActive);
 
 	void clearState() override;
 
@@ -523,13 +524,16 @@ private:
 TTLButton::TTLButton(
 	not_null<Ui::RpWidget*> parent,
 	const style::RecordBar &st,
-	bool recordingVideo)
+	bool recordingVideo,
+	bool startActive)
 : RippleButton(parent, st.lock.ripple)
 , _st(st)
 , _rippleRect(Rect(Size(st::historyRecordLockTopShadow.width()))
 	- (st::historyRecordLockRippleMargin)) {
 	QWidget::resize(Size(st::historyRecordLockTopShadow.width()));
-	Ui::AbstractButton::setDisabled(true);
+	// Novagram "One-time voice": start in view-once (active) when the per-chat
+	// default is on; disabled (normal) otherwise.
+	Ui::AbstractButton::setDisabled(!startActive);
 
 	Ui::AbstractButton::setClickedCallback([=] {
 		Ui::AbstractButton::setDisabled(!Ui::AbstractButton::isDisabled());
@@ -2400,10 +2404,14 @@ void VoiceRecordBar::init() {
 	) | rpl::on_next([=] {
 		if (_hasTTLFilter && _hasTTLFilter()) {
 			if (!_ttlButton) {
+				// Novagram "One-time voice": default to view-once for this chat.
+				const auto startActive = _ttlDefaultFilter
+					&& _ttlDefaultFilter();
 				_ttlButton = std::make_unique<TTLButton>(
 					_outerContainer,
 					_st,
-					_recordingVideo);
+					_recordingVideo,
+					startActive);
 			}
 			_ttlButton->show();
 		}
@@ -2538,6 +2546,10 @@ void VoiceRecordBar::setStartRecordingFilter(FilterCallback &&callback) {
 
 void VoiceRecordBar::setTTLFilter(FilterCallback &&callback) {
 	_hasTTLFilter = std::move(callback);
+}
+
+void VoiceRecordBar::setTTLDefaultFilter(FilterCallback &&callback) {
+	_ttlDefaultFilter = std::move(callback);
 }
 
 void VoiceRecordBar::setPauseInsteadSend(bool pauseInsteadSend) {

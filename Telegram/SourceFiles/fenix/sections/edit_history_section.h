@@ -1,5 +1,5 @@
 /*
-This file is part of FenixUz Desktop, a fork of Telegram Desktop by Vipads LLC.
+This file is part of Novagram Desktop, a fork of Telegram Desktop by Vipads LLC.
 
 A real, full-screen section (not a dialog) that shows the saved edit history of
 a message as chat-style bubbles, with the edit time in the bottom-right corner

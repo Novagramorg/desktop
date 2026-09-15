@@ -20,9 +20,9 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 // used in Updater.cpp and Setup.iss for Windows
 constexpr auto AppId = "{B8E72CF1-5A47-4D9C-92E1-1F87C3E1D5A0}"_cs;
 constexpr auto AppNameOld = "Telegram Win (Unofficial)"_cs;
-constexpr auto AppName = "FenixUz"_cs;
-constexpr auto AppFile = "FenixUz"_cs;
-constexpr auto AppVersion = 6008002;
-constexpr auto AppVersionStr = "6.8.2";
+constexpr auto AppName = "Novagram"_cs;
+constexpr auto AppFile = "Novagram"_cs;
+constexpr auto AppVersion = 6008003;
+constexpr auto AppVersionStr = "6.8.3";
 constexpr auto AppBetaVersion = false;
 constexpr auto AppAlphaVersion = TDESKTOP_ALPHA_VERSION;

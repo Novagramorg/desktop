@@ -113,7 +113,7 @@ void SendProgressManager::send(const Key &key, int progress) {
 	if (skipRequest(key)) {
 		return;
 	}
-	// FenixUz: Ghost mode suppresses typing/recording activity broadcasts.
+	// Novagram: Ghost mode suppresses typing/recording activity broadcasts.
 	if (Fenix::Get().ghostMode()) {
 		return;
 	}

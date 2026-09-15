@@ -8,6 +8,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #pragma once
 
 #include "base/timer.h"
+#include "fenix/reminder.h"
 
 class History;
 class HistoryItem;
@@ -216,6 +217,7 @@ private:
 	void cancelDelayedByTopicRequest(int id);
 
 	const not_null<Session*> _owner;
+	Fenix::Reminder _reminder;
 
 	std::unordered_map<PeerId, std::unique_ptr<History>> _map;
 	base::flat_map<not_null<History*>, State> _states;

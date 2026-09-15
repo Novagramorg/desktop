@@ -8,6 +8,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "data/data_histories.h"
 
 #include "fenix/fenix_settings.h"
+#include "fenix/auto_answer.h"
 #include "fenix/deleted_msg.h"
 #include "api/api_text_entities.h"
 #include "data/business/data_shortcut_messages.h"
@@ -134,13 +135,22 @@ MTPInputMedia WebPageForMTP(
 
 Histories::Histories(not_null<Session*> owner)
 : _owner(owner)
+, _reminder(owner)
 , _readRequestsTimer([=] { sendReadRequests(); }) {
-	// FenixUz: flush held-back read receipts as soon as ghost mode is turned off.
+	// Novagram: flush held-back read receipts as soon as ghost mode is turned off.
 	Fenix::Get().ghostModeChanges(
 	) | rpl::filter([](bool on) {
 		return !on;
 	}) | rpl::on_next([=](bool) {
 		sendReadRequests();
+	}, _lifetime);
+
+	// Novagram auto-answer + unread message reminder: both react to each
+	// freshly-added message.
+	owner->newItemAdded(
+	) | rpl::on_next([this](not_null<HistoryItem*> item) {
+		Fenix::GetAutoAnswer().process(item);
+		_reminder.process(item);
 	}, _lifetime);
 }
 
@@ -256,7 +266,7 @@ void Histories::readInboxTill(
 		not_null<History*> history,
 		MsgId tillId,
 		bool force) {
-	// FenixUz: while a chat is open in ghost preview, never mark it read —
+	// Novagram: while a chat is open in ghost preview, never mark it read —
 	// no local read, no server "read" request, so the other side sees no blue
 	// checks and the chat keeps its unread state (zero footprint).
 	if (Fenix::GetChatPreview().isPreview(history->peer->id)) {
@@ -690,7 +700,7 @@ void Histories::sendReadRequests() {
 	if (_states.empty()) {
 		return;
 	}
-	// FenixUz: Ghost mode holds back read receipts so the server doesn't see activity.
+	// Novagram: Ghost mode holds back read receipts so the server doesn't see activity.
 	if (Fenix::Get().ghostMode()) {
 		return;
 	}
@@ -796,7 +806,7 @@ void Histories::deleteMessages(
 		not_null<History*> history,
 		const QVector<MTPint> &ids,
 		bool revoke) {
-	// FenixUz: mark this batch so SaveDeletedMsg lets it through.
+	// Novagram: mark this batch so SaveDeletedMsg lets it through.
 	Fenix::GetDeleted().markNextAsMine();
 	for (const auto &id : ids) {
 		Fenix::GetDeleted().forget(history->peer->id, id.v);

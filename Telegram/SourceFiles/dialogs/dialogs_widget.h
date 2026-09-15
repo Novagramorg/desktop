@@ -325,6 +325,10 @@ private:
 	object_ptr<Ui::FadeWrapScaled<Ui::IconButton>> _jumpToDate;
 	object_ptr<Ui::CrossButton> _cancelSearch;
 	object_ptr<Ui::FadeWrapScaled<Ui::IconButton>> _lockUnlock;
+	// Novagram: quick Ghost-mode toggle in the chat list header.
+	object_ptr<Ui::FadeWrapScaled<Ui::IconButton>> _ghostToggle;
+	// Novagram: quick Hide-stories toggle in the chat list header.
+	object_ptr<Ui::FadeWrapScaled<Ui::IconButton>> _hideStoriesToggle;
 
 	std::unique_ptr<Ui::MoreChatsBar> _moreChatsBar;
 

@@ -1,5 +1,5 @@
 /*
-This file is part of FenixUz Desktop, a fork of Telegram Desktop by Vipads LLC.
+This file is part of Novagram Desktop, a fork of Telegram Desktop by Vipads LLC.
 
 Per-chat "Auto-translate" target language for OUTGOING messages. When a target
 language is set for a chat, pressing Send first translates the typed text to

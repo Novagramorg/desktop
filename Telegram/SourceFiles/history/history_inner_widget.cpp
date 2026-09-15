@@ -2738,7 +2738,7 @@ void HistoryInner::showContextMenu(QContextMenuEvent *e, bool showFromTouch) {
 				}
 			}, &st::menuIconEdit);
 		}
-		// FenixUz: show saved edit history if we recorded any versions.
+		// Novagram: show saved edit history if we recorded any versions.
 		if (Fenix::GetEdits().has(item->history()->peer->id, item->id)) {
 			const auto peer = item->history()->peer;
 			const auto msgId = item->id;
@@ -3128,6 +3128,10 @@ void HistoryInner::showContextMenu(QContextMenuEvent *e, bool showFromTouch) {
 				_menu->addAction(tr::lng_context_forward_selected(tr::now), [=] {
 					_widget->forwardSelected();
 				}, &st::menuIconForward);
+				// Novagram "Special forward": forward the selection hiding the senders.
+				_menu->addAction(tr::lng_fenix_special_forward(tr::now), [=] {
+					_widget->specialForwardSelected();
+				}, &st::menuIconForward);
 			}
 			if (selectedState.count > 0 && selectedState.canDeleteCount == selectedState.count) {
 				_menu->addAction(tr::lng_context_delete_selected(tr::now), [=] {
@@ -3147,6 +3151,10 @@ void HistoryInner::showContextMenu(QContextMenuEvent *e, bool showFromTouch) {
 				if (item->allowsForward()) {
 					_menu->addAction(tr::lng_context_forward_msg(tr::now), [=] {
 						forwardItem(itemId);
+					}, &st::menuIconForward);
+					// Novagram "Special forward": forward hiding the sender.
+					_menu->addAction(tr::lng_fenix_special_forward(tr::now), [=] {
+						specialForwardItem(itemId);
 					}, &st::menuIconForward);
 				}
 				if (HistoryView::CanAddOfferToMessage(item)) {
@@ -3399,6 +3407,10 @@ void HistoryInner::showContextMenu(QContextMenuEvent *e, bool showFromTouch) {
 				_menu->addAction(tr::lng_context_forward_selected(tr::now), [=] {
 					_widget->forwardSelected();
 				}, &st::menuIconForward);
+				// Novagram "Special forward": forward the selection hiding the senders.
+				_menu->addAction(tr::lng_fenix_special_forward(tr::now), [=] {
+					_widget->specialForwardSelected();
+				}, &st::menuIconForward);
 			}
 			if (selectedState.count > 0 && selectedState.count == selectedState.canDeleteCount) {
 				_menu->addAction(tr::lng_context_delete_selected(tr::now), [=] {
@@ -3416,6 +3428,10 @@ void HistoryInner::showContextMenu(QContextMenuEvent *e, bool showFromTouch) {
 				if (canForward) {
 					_menu->addAction(tr::lng_context_forward_msg(tr::now), [=] {
 						forwardAsGroup(itemId);
+					}, &st::menuIconForward);
+					// Novagram "Special forward": forward hiding the sender.
+					_menu->addAction(tr::lng_fenix_special_forward(tr::now), [=] {
+						specialForwardAsGroup(itemId);
 					}, &st::menuIconForward);
 				}
 				if (HistoryView::CanAddOfferToMessage(item)) {
@@ -5422,6 +5438,28 @@ void HistoryInner::forwardAsGroup(FullMsgId itemId) {
 		Window::ShowForwardMessagesBox(
 			_controller,
 			session().data().itemOrItsGroup(item));
+	}
+}
+
+void HistoryInner::specialForwardItem(FullMsgId itemId) {
+	// Novagram: forward a single message with the original sender hidden.
+	Window::ShowForwardMessagesBox(
+		_controller,
+		Data::ForwardDraft{
+			.ids = { 1, itemId },
+			.options = Data::ForwardOptions::NoSenderNames,
+		});
+}
+
+void HistoryInner::specialForwardAsGroup(FullMsgId itemId) {
+	// Novagram: forward a whole album/group with the original sender hidden.
+	if (const auto item = session().data().message(itemId)) {
+		Window::ShowForwardMessagesBox(
+			_controller,
+			Data::ForwardDraft{
+				.ids = session().data().itemOrItsGroup(item),
+				.options = Data::ForwardOptions::NoSenderNames,
+			});
 	}
 }
 

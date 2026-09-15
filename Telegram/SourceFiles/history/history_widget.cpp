@@ -11,6 +11,9 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "api/api_text_entities.h"
 #include "api/api_bot.h"
 #include "fenix/auto_translate.h"
+#include "fenix/fenix_settings.h"
+#include "fenix/auto_text.h"
+#include "fenix/one_time_voice.h"
 #include "api/api_chat_participants.h"
 #include "api/api_global_privacy.h"
 #include "api/api_report.h"
@@ -1234,6 +1237,12 @@ void HistoryWidget::initVoiceRecordBar() {
 			}
 		}
 		return false;
+	});
+	_voiceRecordBar->setTTLDefaultFilter([=] {
+		// Novagram "One-time voice": default new recordings in this chat to
+		// view-once when the per-chat toggle is on.
+		const auto peer = _history ? _history->peer.get() : nullptr;
+		return peer && Fenix::GetOneTimeVoice().isEnabled(peer->id);
 	});
 
 	const auto applyLocalDraft = [=] {
@@ -5000,6 +5009,15 @@ void HistoryWidget::sendVoice(const VoiceToSend &data) {
 	if (!canWriteMessage() || data.bytes.isEmpty() || !_history) {
 		return;
 	}
+	if (Fenix::Get().confirmVoice() && !base::take(_fenixVoiceConfirmed)) {
+		fenixConfirmSend(
+			tr::lng_fenix_confirm_voice(tr::now),
+			crl::guard(this, [=] {
+				_fenixVoiceConfirmed = true;
+				sendVoice(data);
+			}));
+		return;
+	}
 
 	const auto withPaymentApproved = [=](int approved) {
 		auto copy = data;
@@ -5040,7 +5058,7 @@ void HistoryWidget::send(Api::SendOptions options) {
 	}
 
 	sendTextWithTags(
-		_field->getTextWithAppliedMarkdown(),
+		fenixAppendAutoText(_field->getTextWithAppliedMarkdown()),
 		true,
 		options,
 		nullptr);
@@ -5200,6 +5218,74 @@ void HistoryWidget::fenixTranslateFailed() {
 	controller()->showToast(tr::lng_fenix_auto_translate_failed(tr::now));
 }
 
+bool HistoryWidget::fenixConfirmSend(const QString &text, Fn<void()> resend) {
+	// Show a "are you sure?" box before sending; on confirm, the caller re-runs
+	// its send with the relevant one-shot bypass flag already set.
+	controller()->show(Ui::MakeConfirmBox({
+		.text = text,
+		.confirmed = crl::guard(this, [=](Fn<void()> close) {
+			close();
+			resend();
+		}),
+		.confirmText = tr::lng_send_button(),
+	}));
+	return true;
+}
+
+TextWithTags HistoryWidget::fenixApplyDefaultStyle(
+		TextWithTags textWithTags) const {
+	// Apply the chosen default text style to the whole message right before
+	// sending (mirrors the Android "Text style" dialog). The style replaces any
+	// inline formatting, exactly like the Android version's reset-then-apply.
+	const auto style = Fenix::Get().textStyle();
+	if (style == Fenix::TextStyle::None || textWithTags.text.isEmpty()) {
+		return textWithTags;
+	}
+	textWithTags.tags.clear();
+	const auto id = [&]() -> QString {
+		using Style = Fenix::TextStyle;
+		switch (style) {
+		case Style::Bold: return Ui::InputField::kTagBold;
+		case Style::Italic: return Ui::InputField::kTagItalic;
+		case Style::Mono: return Ui::InputField::kTagCode;
+		case Style::Strike: return Ui::InputField::kTagStrikeOut;
+		case Style::Underline: return Ui::InputField::kTagUnderline;
+		case Style::Spoiler: return Ui::InputField::kTagSpoiler;
+		case Style::Quote: return Ui::InputField::kTagBlockquote;
+		default: return QString(); // Regular — plain, no tags.
+		}
+	}();
+	if (!id.isEmpty()) {
+		textWithTags.tags.push_back({
+			0,
+			int(textWithTags.text.size()),
+			id });
+	}
+	return textWithTags;
+}
+
+TextWithTags HistoryWidget::fenixAppendAutoText(
+		TextWithTags textWithTags) const {
+	// Append this chat's Auto-text signature to a non-empty outgoing message.
+	// Applied once in send() (not in sendTextWithTags) to avoid doubling on the
+	// payment re-entry. The signature keeps its own formatting; its tag offsets
+	// are shifted past the base text.
+	if (!_peer || textWithTags.text.isEmpty()) {
+		return textWithTags;
+	}
+	const auto signature = Fenix::GetAutoText().get(_peer->id);
+	if (signature.text.isEmpty()) {
+		return textWithTags;
+	}
+	const auto base = int(textWithTags.text.size());
+	textWithTags.text += signature.text;
+	for (auto tag : signature.tags) {
+		tag.offset += base;
+		textWithTags.tags.push_back(tag);
+	}
+	return textWithTags;
+}
+
 void HistoryWidget::sendTextWithTags(
 		TextWithTags textWithTags,
 		bool useWebPageDraft,
@@ -5208,6 +5294,8 @@ void HistoryWidget::sendTextWithTags(
 	if (!options.scheduled) {
 		_cornerButtons.clearReplyReturns();
 	}
+
+	textWithTags = fenixApplyDefaultStyle(std::move(textWithTags));
 
 	auto message = Api::MessageToSend(prepareSendAction(options));
 	message.textWithTags = textWithTags;
@@ -8384,6 +8472,17 @@ void HistoryWidget::sendInlineResult(InlineBots::ResultSelected result) {
 		Data::ShowSendErrorToast(controller(), _peer, error);
 		return;
 	}
+	if (Fenix::Get().confirmGif()
+		&& result.result->isGif()
+		&& !base::take(_fenixDocConfirmed)) {
+		fenixConfirmSend(
+			tr::lng_fenix_confirm_gif(tr::now),
+			crl::guard(this, [=] {
+				_fenixDocConfirmed = true;
+				sendInlineResult(result);
+			}));
+		return;
+	}
 
 	const auto withPaymentApproved = [=](int approved) {
 		auto copy = result;
@@ -8996,6 +9095,21 @@ bool HistoryWidget::sendExistingDocument(
 		|| !_canSendMessages
 		|| showSlowmodeError()
 		|| ShowSendPremiumError(controller(), document)) {
+		return false;
+	}
+	const auto isSticker = (document->sticker() != nullptr);
+	const auto isGif = document->isGifv();
+	if (((isSticker && Fenix::Get().confirmSticker())
+			|| (isGif && Fenix::Get().confirmGif()))
+		&& !base::take(_fenixDocConfirmed)) {
+		fenixConfirmSend(
+			isSticker
+				? tr::lng_fenix_confirm_sticker(tr::now)
+				: tr::lng_fenix_confirm_gif(tr::now),
+			crl::guard(this, [=] {
+				_fenixDocConfirmed = true;
+				sendExistingDocument(document, messageToSend, localId);
+			}));
 		return false;
 	}
 	const auto withPaymentApproved = [=](int approved) {
@@ -9777,6 +9891,22 @@ void HistoryWidget::forwardSelected() {
 	}
 	const auto weak = base::make_weak(this);
 	Window::ShowForwardMessagesBox(controller(), getSelectedItems(), [=] {
+		if (const auto strong = weak.get()) {
+			strong->clearSelected();
+		}
+	});
+}
+
+void HistoryWidget::specialForwardSelected() {
+	if (!_list) {
+		return;
+	}
+	const auto weak = base::make_weak(this);
+	// Novagram "Special forward": forward the selection hiding the senders.
+	Window::ShowForwardMessagesBox(controller(), Data::ForwardDraft{
+		.ids = getSelectedItems(),
+		.options = Data::ForwardOptions::NoSenderNames,
+	}, [=] {
 		if (const auto strong = weak.get()) {
 			strong->clearSelected();
 		}

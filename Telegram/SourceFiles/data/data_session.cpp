@@ -2939,7 +2939,7 @@ void Session::processMessagesDeleted(
 		return;
 	}
 
-	// FenixUz: when Save Deleted Messages is enabled, intercept deletions
+	// Novagram: when Save Deleted Messages is enabled, intercept deletions
 	// coming from the server and keep the items visible (Android DeletedMsg
 	// pattern). Own deletions (marked via markNextAsMine) still proceed.
 	const auto saveDeleted = Fenix::Get().saveDeletedMsg();

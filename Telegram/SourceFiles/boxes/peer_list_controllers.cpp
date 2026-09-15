@@ -53,6 +53,8 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "styles/style_boxes.h"
 #include "styles/style_profile.h"
 #include "styles/style_dialogs.h"
+#include "styles/style_widgets.h"
+#include "styles/style_menu_icons.h"
 #include "styles/style_chat_helpers.h"
 #include "styles/style_menu_icons.h"
 
@@ -784,9 +786,60 @@ bool ContactsBoxController::appendRow(not_null<UserData*> user) {
 	return false;
 }
 
+namespace {
+
+// Novagram: contacts-list row that shows a small Novagram-blue profile glyph on
+// the right when the contact has saved YOU back (a mutual contact). Lets you see
+// at a glance who reciprocated.
+class MutualContactRow final : public PeerListRow {
+public:
+	explicit MutualContactRow(not_null<UserData*> user)
+	: PeerListRow(user)
+	, _mutual(user->isContact()
+		&& (user->flags() & UserDataFlag::MutualContact)) {
+	}
+
+	QSize rightActionSize() const override {
+		// Full-height box so the badge can be centered vertically in paint.
+		return _mutual
+			? QSize(
+				st::menuIconProfile.width(),
+				st::defaultPeerListItem.height)
+			: QSize();
+	}
+	QMargins rightActionMargins() const override {
+		return QMargins(0, 0, st::contactsCheckPosition.x() * 2, 0);
+	}
+	bool rightActionDisabled() const override {
+		return true;
+	}
+	void rightActionPaint(
+			Painter &p,
+			int x,
+			int y,
+			int outerWidth,
+			bool selected,
+			bool actionSelected) override {
+		if (!_mutual) {
+			return;
+		}
+		const auto &icon = st::menuIconProfile;
+		const auto top = y
+			+ (st::defaultPeerListItem.height - icon.height()) / 2;
+		// Novagram brand blue #069DFD.
+		icon.paint(p, x, top, outerWidth, QColor(6, 157, 253));
+	}
+
+private:
+	bool _mutual = false;
+
+};
+
+} // namespace
+
 std::unique_ptr<PeerListRow> ContactsBoxController::createRow(
 		not_null<UserData*> user) {
-	return std::make_unique<PeerListRow>(user);
+	return std::make_unique<MutualContactRow>(user);
 }
 
 RecipientMoneyRestrictionError WriteMoneyRestrictionError(

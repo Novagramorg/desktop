@@ -294,6 +294,30 @@ dialogsLock: IconButton {
 }
 dialogsUnlockIcon: icon {{ "dialogs/dialogs_lock_on", dialogsMenuIconFg }};
 dialogsUnlockIconOver: icon {{ "dialogs/dialogs_lock_on", dialogsMenuIconFgOver }};
+dialogsGhost: IconButton {
+	width: 36px;
+	height: 38px;
+
+	icon: icon {{ "menu/ghost", dialogsMenuIconFg }};
+	iconOver: icon {{ "menu/ghost", dialogsMenuIconFgOver }};
+	iconPosition: point(-1px, -1px);
+
+	ripple: emptyRippleAnimation;
+}
+dialogsGhostActiveIcon: icon {{ "menu/ghost", windowActiveTextFg }};
+dialogsGhostActiveIconOver: icon {{ "menu/ghost", windowActiveTextFg }};
+dialogsHideStories: IconButton {
+	width: 36px;
+	height: 38px;
+
+	icon: icon {{ "menu/stealth", dialogsMenuIconFg }};
+	iconOver: icon {{ "menu/stealth", dialogsMenuIconFgOver }};
+	iconPosition: point(-1px, -1px);
+
+	ripple: emptyRippleAnimation;
+}
+dialogsHideStoriesActiveIcon: icon {{ "menu/stealth_locked", windowActiveTextFg }};
+dialogsHideStoriesActiveIconOver: icon {{ "menu/stealth_locked", windowActiveTextFg }};
 dialogsCalendar: IconButton {
 	width: 32px;
 	height: 35px;

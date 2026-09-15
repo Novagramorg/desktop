@@ -1,8 +1,8 @@
-#define MyAppShortName "FenixUz"
-#define MyAppName "FenixUz"
+#define MyAppShortName "Novagram"
+#define MyAppName "Novagram"
 #define MyAppPublisher "Vipads LLC"
 #define MyAppURL "https://vipads.uz"
-#define MyAppExeName "FenixUz.exe"
+#define MyAppExeName "Novagram.exe"
 #define MyAppId "B8E72CF1-5A47-4D9C-92E1-1F87C3E1D5A0"
 #define CurrentYear GetDateTimeString('yyyy','','')
 
@@ -39,17 +39,17 @@ WizardStyle=modern
 
 #if MyBuildTarget == "winarm"
   ArchitecturesAllowed="arm64"
-  OutputBaseFilename=FenixUz-Setup-arm64-{#MyAppVersionFull}
+  OutputBaseFilename=Novagram-Setup-arm64-{#MyAppVersionFull}
   #define ArchModulesFolder "arm64"
   AppVerName={#MyAppName} {#MyAppVersion} arm64
 #elif MyBuildTarget == "win64"
   ArchitecturesAllowed="x64compatible"
   ArchitecturesInstallIn64BitMode="x64compatible"
-  OutputBaseFilename=FenixUz-Setup-x64-{#MyAppVersionFull}
+  OutputBaseFilename=Novagram-Setup-x64-{#MyAppVersionFull}
   #define ArchModulesFolder "x64"
   AppVerName={#MyAppName} {#MyAppVersion} 64bit
 #else
-  OutputBaseFilename=FenixUz-Setup-x86-{#MyAppVersionFull}
+  OutputBaseFilename=Novagram-Setup-x86-{#MyAppVersionFull}
   #define ArchModulesFolder "x86"
   AppVerName={#MyAppName} {#MyAppVersion} 32bit
 #endif

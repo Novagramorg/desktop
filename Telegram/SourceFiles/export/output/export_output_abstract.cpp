@@ -167,7 +167,7 @@ Stats AbstractWriter::produceTestExample(
 
 	auto sessions = Data::SessionsList();
 	auto session = Data::Session();
-	session.applicationName = "FenixUz";
+	session.applicationName = "Novagram";
 	session.applicationVersion = "1.3.8";
 	session.country = "GB";
 	session.created = date();

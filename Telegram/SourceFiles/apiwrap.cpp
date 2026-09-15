@@ -1375,7 +1375,7 @@ void ApiWrap::markContentsRead(
 		QVector<MTPint>>();
 	markedIds.reserve(items.size());
 	for (const auto &item : items) {
-		// FenixUz: ghost preview suppresses the "listened/watched" receipt.
+		// Novagram: ghost preview suppresses the "listened/watched" receipt.
 		if (Fenix::GetChatPreview().isPreview(item->history()->peer->id)) {
 			continue;
 		}
@@ -1404,7 +1404,7 @@ void ApiWrap::markContentsRead(
 }
 
 void ApiWrap::markContentsRead(not_null<HistoryItem*> item) {
-	// FenixUz: ghost preview suppresses the "listened/watched" receipt.
+	// Novagram: ghost preview suppresses the "listened/watched" receipt.
 	if (Fenix::GetChatPreview().isPreview(item->history()->peer->id)) {
 		return;
 	}

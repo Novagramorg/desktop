@@ -1,5 +1,5 @@
 /*
-This file is part of FenixUz Desktop, a fork of Telegram Desktop by Vipads LLC.
+This file is part of Novagram Desktop, a fork of Telegram Desktop by Vipads LLC.
 
 Keeps the previous text of edited messages so the user can review the edit
 history of a message. Equivalent of Android org.fenixuz.utils.EditMessage.

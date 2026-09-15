@@ -24,9 +24,9 @@ StartWidget::StartWidget(
 	not_null<Data*> data)
 : Step(parent, account, data, true) {
 	setMouseTracking(true);
-	setTitleText(rpl::single(u"FenixUz"_q));
+	setTitleText(rpl::single(u"Novagram"_q));
 	setDescriptionText(rpl::single(
-		u"Welcome to the official FenixUz app.\nIt's fast and secure."_q));
+		u"Welcome to the official Novagram app.\nIt's fast and secure."_q));
 	show();
 }
 

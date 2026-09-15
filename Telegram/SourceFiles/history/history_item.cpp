@@ -2067,7 +2067,7 @@ void HistoryItem::clearMainView() {
 }
 
 void HistoryItem::applyEdition(HistoryMessageEdition &&edition) {
-	// FenixUz: remember the text this message had before the edit, so the
+	// Novagram: remember the text this message had before the edit, so the
 	// user can review its full edit history. (Matches Android pro EditMessage.)
 	if (Fenix::Get().saveEditHistory()
 		&& edition.editDate != -1

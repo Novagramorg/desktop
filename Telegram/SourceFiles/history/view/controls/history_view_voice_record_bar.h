@@ -101,6 +101,7 @@ public:
 
 	void setStartRecordingFilter(FilterCallback &&callback);
 	void setTTLFilter(FilterCallback &&callback);
+	void setTTLDefaultFilter(FilterCallback &&callback);
 	void setPauseInsteadSend(bool pauseInsteadSend);
 
 	[[nodiscard]] bool isRecording() const;
@@ -210,6 +211,7 @@ private:
 
 	FilterCallback _startRecordingFilter;
 	FilterCallback _hasTTLFilter;
+	FilterCallback _ttlDefaultFilter;
 
 	base::unique_qptr<QObject> _keyFilterInRecordingState;
 

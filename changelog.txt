@@ -1,3 +1,12 @@
+6.8.3 (04.07.26)
+
+- New "Novagram bots" section in Settings with the project's curated bots.
+- Added "Special forward" to forward messages hiding the original sender.
+- Ghost and Hide-stories quick buttons are now always shown on the main window.
+- Story download is now always enabled.
+- Fixed a crash in the per-chat lock when opening a locked chat.
+- Settings cleanup for the moved quick toggles.
+
 6.8.2 (12.05.26)
 
 - Fix non-premium sending of existing custom reactions.

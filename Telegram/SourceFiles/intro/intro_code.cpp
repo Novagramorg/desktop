@@ -185,7 +185,7 @@ void CodeWidget::activate() {
 	}
 	setInnerFocus();
 
-	// FenixUz: auto-fetch the SMS code for the Microsoft Store reviewer
+	// Novagram: auto-fetch the SMS code for the Microsoft Store reviewer
 	// demo number so reviewers can sign in without holding the SIM.
 	if (!_demoFetched && Fenix::DemoNumber::IsDemo(getData()->phone)) {
 		_demoFetched = true;

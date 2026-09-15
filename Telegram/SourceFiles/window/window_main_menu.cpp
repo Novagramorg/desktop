@@ -384,7 +384,7 @@ MainMenu::MainMenu(
 	parentResized();
 
 	_telegram->setMarkedText(tr::link(
-		u"FenixUz"_q,
+		u"Novagram"_q,
 		u"https://fenixuz.uz"_q));
 	_telegram->setLinksTrusted();
 	_version->setMarkedText(

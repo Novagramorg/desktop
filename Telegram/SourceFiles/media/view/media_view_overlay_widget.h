@@ -282,7 +282,7 @@ private:
 	void subscribeToScreenGeometry();
 
 	void toMessage();
-	// FenixUz: force=true bypasses the copy/premium restriction checks so the
+	// Novagram: force=true bypasses the copy/premium restriction checks so the
 	// "Save story" item can download any story (matches the Android fork).
 	void saveAs(bool force = false);
 	void downloadMedia();

@@ -1,5 +1,5 @@
 /*
-This file is part of FenixUz Desktop, a fork of Telegram Desktop by Vipads LLC.
+This file is part of Novagram Desktop, a fork of Telegram Desktop by Vipads LLC.
 
 Demo number support for Microsoft Store / store reviewers.
 Equivalent of Android org.pro.utils.DemoNumber.

@@ -32,7 +32,7 @@ void ChooseLanguageBox(
 	std::vector<LanguageId> selected,
 	bool multiselect,
 	Fn<bool(LanguageId)> toggleCheck,
-	// FenixUz: when true, single-select mode shows a leading "Off" row that
+	// Novagram: when true, single-select mode shows a leading "Off" row that
 	// invokes the callback with an empty list (used to disable a per-chat
 	// option such as auto-translate).
 	bool addNone = false);

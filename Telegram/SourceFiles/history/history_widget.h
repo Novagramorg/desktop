@@ -23,7 +23,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 
 enum class SendMediaType;
 class MessageLinksParser;
-class QNetworkAccessManager; // FenixUz auto-translate (Google direct).
+class QNetworkAccessManager; // Novagram auto-translate (Google direct).
 struct InlineBotQuery;
 
 namespace MTP {
@@ -293,6 +293,7 @@ public:
 	QPixmap grabForShowAnimation(const Window::SectionSlideParams &params);
 
 	void forwardSelected();
+	void specialForwardSelected();
 	void confirmDeleteSelected();
 	void clearSelected();
 
@@ -449,7 +450,7 @@ private:
 		Api::SendOptions options,
 		Fn<void()> done);
 	void send(Api::SendOptions options);
-	// FenixUz: per-chat outgoing auto-translate. Returns true when the send was
+	// Novagram: per-chat outgoing auto-translate. Returns true when the send was
 	// intercepted (translation started or deferred), so the caller must not run
 	// the normal send for this tap. Google direct first (fast), Telegram server
 	// fallback (works where Google is blocked, keeps entities).
@@ -463,6 +464,13 @@ private:
 		QString lang,
 		Api::SendOptions options);
 	void fenixTranslateFailed();
+	[[nodiscard]] bool fenixConfirmSend(
+		const QString &text,
+		Fn<void()> resend);
+	[[nodiscard]] TextWithTags fenixApplyDefaultStyle(
+		TextWithTags textWithTags) const;
+	[[nodiscard]] TextWithTags fenixAppendAutoText(
+		TextWithTags textWithTags) const;
 	void sendWithModifiers(Qt::KeyboardModifiers modifiers);
 	void sendScheduled(Api::SendOptions initialOptions);
 	[[nodiscard]] SendMenu::Details sendButtonMenuDetails() const;
@@ -959,10 +967,12 @@ private:
 	bool _sponsoredMessagesStateKnown = false;
 	bool _justMarkingAsRead = false;
 
-	// FenixUz: outgoing auto-translate state.
+	// Novagram: outgoing auto-translate state.
 	bool _fenixTranslating = false;
 	bool _fenixSendOriginalOnce = false;
 	std::unique_ptr<QNetworkAccessManager> _fenixTranslateNetwork;
+	bool _fenixVoiceConfirmed = false;
+	bool _fenixDocConfirmed = false;
 
 	object_ptr<Ui::PlainShadow> _topShadow;
 	bool _inGrab = false;

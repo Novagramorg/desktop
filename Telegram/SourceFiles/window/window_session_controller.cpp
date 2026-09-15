@@ -72,6 +72,11 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "chat_helpers/emoji_interactions.h"
 #include "core/shortcuts.h"
 #include "core/application.h"
+#include "fenix/fenix_settings.h"
+#include "fenix/auto_answer.h"
+#include "fenix/chat_lock.h"
+#include "fenix/chat_lock_box.h"
+#include "ui/layers/generic_box.h"
 #include "core/click_handler_types.h"
 #include "core/file_utilities.h"
 #include "core/ui_integration.h"
@@ -1594,6 +1599,15 @@ SessionController::SessionController(
 		}
 	}, _lifetime);
 
+	// Novagram per-chat lock: re-lock every chat except the one now open, so a
+	// locked chat asks for its passcode each time you open it (matching the
+	// Android fork, where the unlock lasts only while you stay in the chat).
+	activeChatChanges(
+	) | rpl::on_next([](Dialogs::Key key) {
+		const auto peer = key.peer();
+		Fenix::GetChatLock().relockAllExcept(peer ? peer->id : PeerId(0));
+	}, _lifetime);
+
 	_authedName = session->user()->name();
 	session->changes().peerUpdates(
 		Data::PeerUpdate::Flag::FullInfo
@@ -1633,7 +1647,10 @@ SessionController::SessionController(
 	}, lifetime());
 
 	const auto processFiltersMenu = [this] {
-		if (SessionNavigation::session().data().chatsFilters().has()) {
+		// Novagram: "Hide folder tabs" reuses Telegram's own hide path — when
+		// enabled, neither the horizontal strip nor the vertical menu show.
+		if (SessionNavigation::session().data().chatsFilters().has()
+				&& !Fenix::Get().hideFolderTabs()) {
 			const auto isHorizontal
 				= Core::App().settings().chatFiltersHorizontal()
 					|| !enoughSpaceForFilters();
@@ -1647,6 +1664,7 @@ SessionController::SessionController(
 	rpl::merge(
 		enoughSpaceForFiltersValue() | rpl::skip(1) | rpl::to_empty,
 		Core::App().settings().chatFiltersHorizontalChanges() | rpl::to_empty,
+		Fenix::Get().hideFolderTabsChanges() | rpl::to_empty,
 		session->data().chatsFilters().changed()
 	) | rpl::on_next([=] {
 		if (!_filtersActivated) {
@@ -1654,6 +1672,15 @@ SessionController::SessionController(
 		}
 		checkOpenedFilter();
 		crl::on_main(this, processFiltersMenu);
+	}, lifetime());
+
+	// Novagram auto-answer: opening a chat re-arms it, so it can be
+	// auto-answered again the next time that contact messages you.
+	activeChatChanges(
+	) | rpl::on_next([=](const Dialogs::Key &key) {
+		if (const auto peer = key.peer()) {
+			Fenix::GetAutoAnswer().markOpened(peer->id);
+		}
 	}, lifetime());
 
 	session->data().itemIdChanged(
@@ -3022,6 +3049,24 @@ void SessionController::showPeerHistory(
 		PeerId peerId,
 		const SectionShow &params,
 		MsgId msgId) {
+	// Per-chat lock: gate a locked chat behind its passcode. On success the box
+	// re-dispatches this same call, which now passes the guard (unlocked set).
+	if (peerId
+		&& Fenix::GetChatLock().isLocked(peerId)
+		&& !Fenix::GetChatLock().isUnlocked(peerId)) {
+		const auto paramsCopy = params;
+		// Defer the re-dispatch to the next loop tick: the unlock box invokes
+		// this callback from inside its own submit handler and then closes
+		// itself. Navigating synchronously here would call hideSettingsAndLayer()
+		// (mainwidget.cpp), destroying that very box mid-handler — a
+		// use-after-free crash. on_main lets the box close cleanly first.
+		show(Box(Fenix::ChatLockUnlockBox, peerId, crl::guard(this, [=] {
+			crl::on_main(crl::guard(this, [=] {
+				showPeerHistory(peerId, paramsCopy, msgId);
+			}));
+		})));
+		return;
+	}
 	content()->showHistory(peerId, params, msgId);
 }
 

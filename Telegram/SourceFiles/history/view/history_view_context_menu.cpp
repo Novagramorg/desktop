@@ -53,6 +53,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "ui/widgets/labels.h"
 #include "ui/vertical_list.h"
 #include "fenix/fenix_settings.h"
+#include "fenix/photo_to_text.h"
 #include "fenix/edit_history.h"
 #include "fenix/sections/edit_history_section.h"
 #include "base/debug_log.h"
@@ -211,6 +212,24 @@ void AddPhotoActions(
 				CopyImage(photo);
 			}
 		}, &st::menuIconCopy);
+
+		// Novagram "Scan text" (OCR): only for already-downloaded photos and
+		// only when the platform has an on-device OCR engine.
+		const auto media = photo->activeMediaView();
+		if (Fenix::OcrSupported() && media && media->loaded()) {
+			const auto controller = list->controller();
+			menu->addAction(tr::lng_fenix_ocr_scan(tr::now), [=] {
+				const auto media = photo->activeMediaView();
+				if (!media || !media->loaded()) {
+					return;
+				}
+				auto image = media->image(Data::PhotoSize::Large)->original();
+				if (image.isNull()) {
+					return;
+				}
+				Fenix::ShowPhotoToText(controller, std::move(image));
+			}, &st::menuIconTranslate);
+		}
 	}
 	if (photo->hasAttachedStickers()) {
 		const auto controller = list->controller();
@@ -446,12 +465,82 @@ bool AddForwardMessageAction(
 	return true;
 }
 
+bool AddSpecialForwardSelectedAction(
+		not_null<Ui::PopupMenu*> menu,
+		const ContextMenuRequest &request,
+		not_null<ListWidget*> list) {
+	if (!request.overSelection || request.selectedItems.empty()) {
+		return false;
+	}
+	if (!ranges::all_of(request.selectedItems, &SelectedItem::canForward)) {
+		return false;
+	}
+
+	// Novagram "Special forward": same eligibility as Forward, but the forward
+	// is pre-set to hide the original sender's name (NoSenderNames), matching
+	// the Android fork's hideSpetialFunction one-shot forward.
+	menu->addAction(tr::lng_fenix_special_forward(tr::now), [=] {
+		const auto weak = base::make_weak(list);
+		const auto callback = [=] {
+			if (const auto strong = weak.get()) {
+				strong->cancelSelection();
+			}
+		};
+		Window::ShowForwardMessagesBox(
+			request.navigation,
+			Data::ForwardDraft{
+				.ids = ExtractIdsList(request.selectedItems),
+				.options = Data::ForwardOptions::NoSenderNames,
+			},
+			callback);
+	}, &st::menuIconForward);
+	return true;
+}
+
+bool AddSpecialForwardMessageAction(
+		not_null<Ui::PopupMenu*> menu,
+		const ContextMenuRequest &request,
+		not_null<ListWidget*> list) {
+	const auto item = request.item;
+	if (!request.selectedItems.empty()) {
+		return false;
+	} else if (!item || !item->allowsForward()) {
+		return false;
+	}
+	const auto owner = &item->history()->owner();
+	const auto asGroup = (request.pointState != PointState::GroupPart);
+	if (asGroup) {
+		if (const auto group = owner->groups().find(item)) {
+			if (!ranges::all_of(group->items, &HistoryItem::allowsForward)) {
+				return false;
+			}
+		}
+	}
+	const auto itemId = item->fullId();
+	// Novagram "Special forward": like Forward, but hides the original sender.
+	menu->addAction(tr::lng_fenix_special_forward(tr::now), [=] {
+		if (const auto item = owner->message(itemId)) {
+			Window::ShowForwardMessagesBox(
+				request.navigation,
+				Data::ForwardDraft{
+					.ids = (asGroup
+						? owner->itemOrItsGroup(item)
+						: MessageIdsList{ 1, itemId }),
+					.options = Data::ForwardOptions::NoSenderNames,
+				});
+		}
+	}, &st::menuIconForward);
+	return true;
+}
+
 void AddForwardAction(
 		not_null<Ui::PopupMenu*> menu,
 		const ContextMenuRequest &request,
 		not_null<ListWidget*> list) {
 	AddForwardSelectedAction(menu, request, list);
 	AddForwardMessageAction(menu, request, list);
+	AddSpecialForwardSelectedAction(menu, request, list);
+	AddSpecialForwardMessageAction(menu, request, list);
 }
 
 bool AddSendNowSelectedAction(

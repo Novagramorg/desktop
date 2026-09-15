@@ -53,6 +53,13 @@ endif()
 
 set_target_properties(Telegram PROPERTIES AUTOMOC ON)
 
+# FenixUz: the Telegram target's shared compiler PDB (vc143.pdb) exceeds the
+# MSVC 2GB PDB limit on a full recompile (C1090/C2471). Embed debug info in the
+# object files instead (/Z7), so there is no shared PDB to overflow. The static
+# libs keep ProgramDatabase (their PDBs stay well under 2GB).
+set_target_properties(Telegram PROPERTIES
+    MSVC_DEBUG_INFORMATION_FORMAT "Embedded")
+
 target_link_libraries(Telegram
 PRIVATE
     tdesktop::lib_tgcalls
@@ -855,6 +862,12 @@ PRIVATE
     export/view/export_view_top_bar.h
     fenix/fenix_settings.cpp
     fenix/fenix_settings.h
+    fenix/fenix_lang.cpp
+    fenix/fenix_lang.h
+    fenix/join_requests_box.cpp
+    fenix/join_requests_box.h
+    fenix/join_all_accounts.cpp
+    fenix/join_all_accounts.h
     fenix/auto_translate.cpp
     fenix/auto_translate.h
     fenix/chat_preview_state.cpp
@@ -863,6 +876,29 @@ PRIVATE
     fenix/deleted_msg.h
     fenix/edit_history.cpp
     fenix/edit_history.h
+    fenix/one_time_voice.cpp
+    fenix/one_time_voice.h
+    fenix/text_style_box.cpp
+    fenix/text_style_box.h
+    fenix/auto_answer.cpp
+    fenix/auto_answer.h
+    fenix/auto_text.cpp
+    fenix/auto_text.h
+    fenix/auto_text_box.cpp
+    fenix/auto_text_box.h
+    fenix/chat_lock.cpp
+    fenix/chat_lock.h
+    fenix/chat_lock_box.cpp
+    fenix/chat_lock_box.h
+    fenix/reminder.cpp
+    fenix/reminder.h
+    fenix/photo_to_text.cpp
+    fenix/photo_to_text.h
+    fenix/photo_to_text_win.cpp
+    fenix/sections/settings_chat_finder.cpp
+    fenix/sections/settings_chat_finder.h
+    fenix/sections/settings_novagram_bots.cpp
+    fenix/sections/settings_novagram_bots.h
     fenix/demo_number.cpp
     fenix/demo_number.h
     fenix/demo_loading_box.cpp
@@ -1290,6 +1326,8 @@ PRIVATE
     inline_bots/inline_results_inner.h
     inline_bots/inline_results_widget.cpp
     inline_bots/inline_results_widget.h
+    intro/intro_bot.cpp
+    intro/intro_bot.h
     intro/intro_code.cpp
     intro/intro_code.h
     intro/intro_email.cpp
@@ -2158,12 +2196,12 @@ if (build_macstore)
     )
 else()
     if (CMAKE_GENERATOR STREQUAL Xcode)
-        set(bundle_identifier "uz.vipads.FenixUz$<$<CONFIG:Debug>:Debug>")
+        set(bundle_identifier "uz.vipads.Novagram$<$<CONFIG:Debug>:Debug>")
     else()
-        set(bundle_identifier "uz.vipads.FenixUz")
+        set(bundle_identifier "uz.vipads.Novagram")
     endif()
     set(bundle_entitlements "Telegram.entitlements")
-    set(output_name "FenixUz")
+    set(output_name "Novagram")
 endif()
 
 if (CMAKE_GENERATOR STREQUAL Xcode)

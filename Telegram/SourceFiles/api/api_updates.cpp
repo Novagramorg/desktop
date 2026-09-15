@@ -259,7 +259,7 @@ Updates::Updates(not_null<Main::Session*> session)
 		updateOnline();
 	}, _lifetime);
 
-	// FenixUz: sending a message makes the server briefly mark us online
+	// Novagram: sending a message makes the server briefly mark us online
 	// (sending implies activity), which would light up the online dot even
 	// with ghost mode on. Re-assert offline ~1s after each outgoing message.
 	session->changes().messageUpdates(
@@ -1030,7 +1030,7 @@ void Updates::updateOnline(crl::time lastNonIdleTime, bool gotOtherOffline) {
 			Assert(updateIn >= 0);
 		}
 	}
-	// FenixUz: Ghost mode forces offline status to the server.
+	// Novagram: Ghost mode forces offline status to the server.
 	if (Fenix::Get().ghostMode()) {
 		isOnline = false;
 	}

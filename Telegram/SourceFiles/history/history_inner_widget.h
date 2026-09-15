@@ -445,6 +445,8 @@ private:
 		SelectAction action) const;
 	void forwardItem(FullMsgId itemId);
 	void forwardAsGroup(FullMsgId itemId);
+	void specialForwardItem(FullMsgId itemId);
+	void specialForwardAsGroup(FullMsgId itemId);
 	void deleteItem(not_null<HistoryItem*> item);
 	void deleteItem(FullMsgId itemId);
 	void deleteAsGroup(FullMsgId itemId);

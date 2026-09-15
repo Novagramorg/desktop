@@ -1,5 +1,5 @@
 /*
-This file is part of FenixUz Desktop, a fork of Telegram Desktop by Vipads LLC.
+This file is part of Novagram Desktop, a fork of Telegram Desktop by Vipads LLC.
 
 Tracks messages deleted by others so the local view can keep them visible
 with a "deleted by" annotation. Equivalent of Android org.pro.utils.DeletedMsg.

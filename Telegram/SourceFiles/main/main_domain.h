@@ -31,8 +31,16 @@ public:
 		std::unique_ptr<Account> account;
 	};
 
-	static constexpr auto kMaxAccounts = 3;
-	static constexpr auto kPremiumMaxAccounts = 6;
+	// Novagram: account limit raised well above the vanilla 3/6.
+	// kPremiumMaxAccounts is the hard cap enforced by the add() assert
+	// (main_domain.cpp) and by storage load/index validation
+	// (storage_domain.cpp); kMaxAccounts is the base (premium-independent)
+	// limit. Keeping both equal fully decouples the limit from Premium, so any
+	// account may add up to the cap. Nothing is indexed by a fixed-size array,
+	// so raising these is crash-safe; the only real cost is that each active
+	// account keeps its own live MTProto connection.
+	static constexpr auto kMaxAccounts = 100;
+	static constexpr auto kPremiumMaxAccounts = 100;
 
 	explicit Domain(const QString &dataName);
 	~Domain();

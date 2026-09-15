@@ -281,7 +281,7 @@ void ChooseLanguageBox(
 
 	const auto container = box->verticalLayout();
 	if (addNone && !multiselect) {
-		// FenixUz: leading "Off" row that disables the per-chat option.
+		// Novagram: leading "Off" row that disables the per-chat option.
 		const auto none = container->add(object_ptr<SettingsButton>(
 			container,
 			tr::lng_fenix_auto_translate_off(),

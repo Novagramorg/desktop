@@ -46,6 +46,8 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "settings/cloud_password/settings_cloud_password_input.h"
 #include "settings/sections/settings_advanced.h"
 #include "fenix/sections/settings_fenix.h"
+#include "fenix/sections/settings_chat_finder.h"
+#include "fenix/sections/settings_novagram_bots.h"
 #include "settings/sections/settings_business.h"
 #include "settings/sections/settings_calls.h"
 #include "settings/sections/settings_chat.h"
@@ -442,6 +444,20 @@ void BuildSectionButtons(SectionBuilder &builder) {
 		.targetSection = FenixId(),
 		.icon = { &st::menuIconShowInFolder },
 		.keywords = { u"ghost"_q, u"stealth"_q, u"offline"_q, u"fenix"_q, u"features"_q },
+	});
+
+	builder.addSectionButton({
+		.title = tr::lng_fenix_bots(),
+		.targetSection = NovagramBotsId(),
+		.icon = { &st::menuIconBot },
+		.keywords = { u"bots"_q, u"novagram"_q, u"tools"_q },
+	});
+
+	builder.addSectionButton({
+		.title = tr::lng_fenix_chat_finder(),
+		.targetSection = FenixChatFinderId(),
+		.icon = { &st::menuIconSearch },
+		.keywords = { u"username"_q, u"find"_q, u"chat"_q, u"finder"_q },
 	});
 
 	builder.addSectionButton({

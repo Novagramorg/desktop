@@ -11,6 +11,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "intro/intro_code.h"
 #include "intro/intro_email.h"
 #include "intro/intro_qr.h"
+#include "intro/intro_bot.h"
 #include "styles/style_intro.h"
 #include "ui/widgets/buttons.h"
 #include "ui/widgets/labels.h"
@@ -97,6 +98,7 @@ PhoneWidget::PhoneWidget(
 	}, lifetime());
 	setErrorCentered(true);
 	setupQrLogin();
+	setupBotLogin();
 
 	if (!_country->chooseCountry(getData()->country)) {
 		_country->chooseCountry(u"US"_q);
@@ -127,6 +129,27 @@ void PhoneWidget::setupQrLogin() {
 
 	qrLogin->setClickedCallback([=] {
 		goReplace<QrWidget>(Animate::Forward);
+	});
+}
+
+void PhoneWidget::setupBotLogin() {
+	// Novagram: log in with a @BotFather token instead of a phone number.
+	const auto botLogin = Ui::CreateChild<Ui::LinkButton>(
+		this,
+		tr::lng_fenix_bot_login(tr::now));
+	botLogin->show();
+
+	rpl::combine(
+		sizeValue(),
+		botLogin->widthValue()
+	) | rpl::on_next([=](QSize size, int botLoginWidth) {
+		botLogin->moveToLeft(
+			(size.width() - botLoginWidth) / 2,
+			contentTop() + st::introBotLoginLinkTop);
+	}, botLogin->lifetime());
+
+	botLogin->setClickedCallback([=] {
+		goReplace<BotWidget>(Animate::Forward);
 	});
 }
 

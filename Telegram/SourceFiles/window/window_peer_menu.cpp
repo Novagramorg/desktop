@@ -58,6 +58,17 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "ui/boxes/choose_language_box.h"
 #include "fenix/auto_translate.h"
 #include "fenix/chat_preview_state.h"
+#include "fenix/fenix_settings.h"
+#include "fenix/one_time_voice.h"
+#include "fenix/text_style_box.h"
+#include "fenix/auto_text.h"
+#include "fenix/auto_text_box.h"
+#include "fenix/chat_lock.h"
+#include "fenix/chat_lock_box.h"
+#include "fenix/join_all_accounts.h"
+#include "fenix/join_requests_box.h"
+#include "main/main_domain.h"
+#include "main/main_account.h"
 #include "spellcheck/spellcheck_types.h"
 #include "ui/delayed_activation.h"
 #include "ui/vertical_list.h"
@@ -323,6 +334,14 @@ private:
 	void addTranslate();
 	void addFenixAutoTranslate();
 	void addFenixChatPreview();
+	void addFenixOneTimeVoice();
+	void addFenixTextStyle();
+	void addFenixAutoText();
+	void addFenixJoinAllAccounts();
+	void addFenixJoinRequests();
+	void addFenixChatId();
+	void addFenixFirstMessage();
+	void addFenixChatLock();
 	void addReport();
 	void addNewContact();
 	void addShareContact();
@@ -1016,6 +1035,87 @@ void Filler::addFenixAutoTranslate() {
 	}, &st::menuIconTranslate);
 }
 
+void Filler::addFenixOneTimeVoice() {
+	// One-time voice only exists where Telegram offers view-once: a private
+	// chat with a real user (not yourself, not a bot). Mirrors the TTL filter.
+	if (!_peer || _topic || _sublist) {
+		return;
+	}
+	const auto user = _peer->asUser();
+	if (!user || user->isSelf() || user->isBot()) {
+		return;
+	}
+	const auto peerId = _peer->id;
+	const auto enabled = Fenix::GetOneTimeVoice().isEnabled(peerId);
+	_addAction(enabled
+		? tr::lng_fenix_one_time_voice_on(tr::now)
+		: tr::lng_fenix_one_time_voice(tr::now), [=] {
+		Fenix::GetOneTimeVoice().toggle(peerId);
+	}, &st::menuIconTTL);
+}
+
+void Filler::addFenixJoinAllAccounts() {
+	// Join a public channel/group with every other logged-in account at once.
+	if (!_peer || _topic || _sublist) {
+		return;
+	}
+	const auto channel = _peer->asChannel();
+	if (!channel
+		|| channel->username().isEmpty()
+		|| Core::App().domain().accountsAuthedCount() < 2) {
+		return;
+	}
+	const auto controller = _controller;
+	_addAction(tr::lng_fenix_join_all_accounts(tr::now), [=] {
+		Fenix::JoinChannelOnAllAccounts(controller, channel);
+	}, &st::menuIconInvite);
+}
+
+void Filler::addFenixJoinRequests() {
+	// Bulk approve/decline accumulated join requests in a managed channel.
+	if (!_peer || _topic || _sublist) {
+		return;
+	}
+	const auto channel = _peer->asChannel();
+	if (!channel || !channel->canAddMembers()) {
+		return;
+	}
+	const auto controller = _controller;
+	const auto peer = _peer;
+	_addAction(tr::lng_fenix_join_requests(tr::now), [=] {
+		controller->show(Box(Fenix::JoinRequestsBox, controller, peer));
+	}, &st::menuIconInvite);
+}
+
+void Filler::addFenixTextStyle() {
+	// Global "Default text style", opened from any chat's menu (like the
+	// Android TextStyleDialog). The style is applied to the whole message
+	// right before sending — see HistoryWidget::fenixApplyDefaultStyle.
+	if (!_peer) {
+		return;
+	}
+	const auto controller = _controller;
+	_addAction(tr::lng_fenix_text_style(tr::now), [=] {
+		controller->show(Box(Fenix::FenixTextStyleBox));
+	}, &st::menuIconEdit);
+}
+
+void Filler::addFenixAutoText() {
+	// Per-chat signature appended to outgoing text messages. Opens the editor;
+	// the label shows whether a signature is currently set for this chat.
+	if (!_peer || _topic || _sublist) {
+		return;
+	}
+	const auto peerId = _peer->id;
+	const auto controller = _controller;
+	const auto active = Fenix::GetAutoText().isActive(peerId);
+	_addAction(active
+		? tr::lng_fenix_auto_text_on(tr::now)
+		: tr::lng_fenix_auto_text(tr::now), [=] {
+		controller->show(Box(Fenix::FenixAutoTextBox, peerId));
+	}, &st::menuIconTopics);
+}
+
 void Filler::addFenixChatPreview() {
 	// Ghost preview: open a chat to read it without sending any read receipt
 	// (no blue checks, no "listened/watched"). Suppression is scoped to this
@@ -1035,6 +1135,92 @@ void Filler::addFenixChatPreview() {
 		}, controller->lifetime());
 		controller->showPeerHistory(peer);
 	}, &st::menuIconStealth);
+}
+
+void Filler::addFenixChatId() {
+	// Shows this chat's numeric ID in the menu; clicking copies it to the
+	// clipboard. Channels/supergroups use the -100… form so the value can be
+	// pasted straight into bot APIs.
+	if (!_peer || _topic || _sublist) {
+		return;
+	}
+	const auto peer = _peer;
+	const auto controller = _controller;
+	const auto idString = [&]() -> QString {
+		if (peer->isUser()) {
+			return QString::number(peerToUser(peer->id).bare);
+		} else if (peer->isChannel()) {
+			return u"-100"_q + QString::number(peerToChannel(peer->id).bare);
+		} else if (peer->isChat()) {
+			return u"-"_q + QString::number(peerToChat(peer->id).bare);
+		}
+		return QString();
+	}();
+	if (idString.isEmpty()) {
+		return;
+	}
+	_addAction(
+		tr::lng_fenix_chat_id(tr::now) + u": "_q + idString,
+		[=] {
+			QGuiApplication::clipboard()->setText(idString);
+			controller->showToast(tr::lng_fenix_chat_id_copied(tr::now));
+		},
+		&st::menuIconCopy);
+}
+
+void Filler::addFenixFirstMessage() {
+	// Jumps to the very first (oldest) message of the chat. Showing history at
+	// MsgId(1) makes the client load from the start, landing on message #1.
+	if (!_peer || _topic) {
+		return;
+	}
+	const auto peer = _peer;
+	const auto controller = _controller;
+	_addAction(tr::lng_fenix_first_message(tr::now), [=] {
+		controller->showPeerHistory(
+			peer,
+			Window::SectionShow::Way::Forward,
+			MsgId(1));
+	}, &st::menuIconRestore);
+}
+
+void Filler::addFenixChatLock() {
+	// Per-chat lock. Toggles in the chat's menu: when unlocked, offers to lock
+	// with either the shared "common" passcode or a separate per-chat one; when
+	// locked, removes the lock. Opening a locked chat is gated behind the
+	// passcode by SessionController::showPeerHistory.
+	if (!_peer || _topic || _sublist) {
+		return;
+	}
+	const auto peerId = _peer->id;
+	const auto controller = _controller;
+	const auto locked = Fenix::GetChatLock().isLocked(peerId);
+	_addAction(locked
+		? tr::lng_fenix_chat_unlock(tr::now)
+		: tr::lng_fenix_chat_lock(tr::now), [=] {
+		if (Fenix::GetChatLock().isLocked(peerId)) {
+			Fenix::GetChatLock().unlock(peerId);
+			controller->showToast(tr::lng_fenix_chat_unlocked(tr::now));
+			return;
+		}
+		controller->show(Box(Fenix::ChatLockChoiceBox, [=](bool individual) {
+			auto &lock = Fenix::GetChatLock();
+			if (!individual && lock.hasCommonPassword()) {
+				// Reuse the existing shared passcode — no new one needed.
+				lock.addCommonLock(peerId);
+				lock.markUnlocked(peerId);
+				controller->showToast(tr::lng_fenix_chat_locked(tr::now));
+				return;
+			}
+			controller->show(Box(
+				Fenix::ChatLockCreateBox,
+				peerId,
+				individual,
+				[=] {
+					controller->showToast(tr::lng_fenix_chat_locked(tr::now));
+				}));
+		}));
+	}, &st::menuIconLock);
 }
 
 void Filler::addReport() {
@@ -1840,6 +2026,14 @@ void Filler::fillHistoryActions() {
 	addExportChat();
 	addTranslate();
 	addFenixAutoTranslate();
+	addFenixOneTimeVoice();
+	addFenixTextStyle();
+	addFenixAutoText();
+	addFenixJoinAllAccounts();
+	addFenixJoinRequests();
+	addFenixFirstMessage();
+	addFenixChatId();
+	addFenixChatLock();
 	addReport();
 	addClearHistory();
 	addDeleteChat();
@@ -3146,6 +3340,13 @@ base::weak_qptr<Ui::BoxContent> ShowForwardMessagesBox(
 		boxRaw->setForwardOptions({
 			.sendersCount = sendersCount,
 			.captionsCount = captionsCount,
+			// Novagram "Special forward": seed the checkboxes from the incoming
+			// draft so a forward requested with the sender hidden opens with
+			// "hide sender name" already on (and the multi-select send path,
+			// which reads the box options, honours it too).
+			.dropNames = (draft.options != Data::ForwardOptions::PreserveInfo),
+			.dropCaptions
+				= (draft.options == Data::ForwardOptions::NoNamesAndCaptions),
 		});
 		show->showBox(std::move(box));
 		auto state = State{ boxRaw, controllerRaw };

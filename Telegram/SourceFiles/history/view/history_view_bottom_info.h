@@ -50,7 +50,7 @@ public:
 
 		QDateTime date;
 		QString author;
-		// FenixUz: when non-empty, the message was preserved by SaveDeletedMsg
+		// Novagram: when non-empty, the message was preserved by SaveDeletedMsg
 		// and this text is prepended to the date row.
 		QString fenixDeletedBy;
 		EffectId effectId = 0;

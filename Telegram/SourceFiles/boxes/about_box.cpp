@@ -63,7 +63,7 @@ rpl::producer<TextWithEntities> Text3() {
 } // namespace
 
 void AboutBox(not_null<Ui::GenericBox*> box) {
-	box->setTitle(u"FenixUz"_q);
+	box->setTitle(u"Novagram"_q);
 
 	auto layout = box->verticalLayout();
 
@@ -105,7 +105,7 @@ void AboutBox(not_null<Ui::GenericBox*> box) {
 			box->getDelegate()->show(
 				Ui::MakeInformBox(
 					"The link to the current private alpha "
-					"version of Telegram Desktop was copied "
+					"version of Novagram was copied "
 					"to the clipboard."));
 		} else {
 			File::OpenUrl(Core::App().changelogLink());

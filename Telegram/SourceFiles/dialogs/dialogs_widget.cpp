@@ -56,6 +56,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "apiwrap.h"
 #include "chat_helpers/message_field.h"
 #include "core/application.h"
+#include "fenix/fenix_settings.h"
 #include "core/ui_integration.h"
 #include "core/update_checker.h"
 #include "core/shortcuts.h"
@@ -365,6 +366,12 @@ Widget::Widget(
 , _lockUnlock(
 	_searchControls,
 	object_ptr<Ui::IconButton>(this, st::dialogsLock))
+, _ghostToggle(
+	_searchControls,
+	object_ptr<Ui::IconButton>(this, st::dialogsGhost))
+, _hideStoriesToggle(
+	_searchControls,
+	object_ptr<Ui::IconButton>(this, st::dialogsHideStories))
 , _scroll(this)
 , _scrollToTop(_scroll, st::dialogsToUp)
 , _stories((_layout != Layout::Child)
@@ -405,6 +412,32 @@ Widget::Widget(
 	}, _innerList->lifetime());
 	_scrollToTop->raise();
 	_lockUnlock->toggle(false, anim::type::instant);
+
+	// Novagram: quick Ghost-mode toggle next to search — always shown. Click
+	// flips Ghost mode, and the icon reflects whether Ghost mode is active.
+	_ghostToggle->toggle(true, anim::type::instant);
+	_ghostToggle->entity()->setClickedCallback([=] {
+		Fenix::Get().setGhostMode(!Fenix::Get().ghostMode());
+	});
+	Fenix::Get().ghostModeValue(
+	) | rpl::on_next([=](bool active) {
+		_ghostToggle->entity()->setIconOverride(
+			active ? &st::dialogsGhostActiveIcon : nullptr,
+			active ? &st::dialogsGhostActiveIconOver : nullptr);
+	}, lifetime());
+
+	// Novagram: quick Hide-stories toggle next to Ghost — always shown. Click
+	// flips Hide-stories, and the icon reflects whether stories are hidden.
+	_hideStoriesToggle->toggle(true, anim::type::instant);
+	_hideStoriesToggle->entity()->setClickedCallback([=] {
+		Fenix::Get().setHideStories(!Fenix::Get().hideStories());
+	});
+	Fenix::Get().hideStoriesValue(
+	) | rpl::on_next([=](bool active) {
+		_hideStoriesToggle->entity()->setIconOverride(
+			active ? &st::dialogsHideStoriesActiveIcon : nullptr,
+			active ? &st::dialogsHideStoriesActiveIconOver : nullptr);
+	}, lifetime());
 
 	_inner->updated(
 	) | rpl::on_next([=] {
@@ -717,6 +750,7 @@ Widget::Widget(
 	setupSwipeBack();
 
 	if (session().settings().dialogsFiltersEnabled()
+		&& !Fenix::Get().hideFolderTabs()
 		&& (Core::App().settings().chatFiltersHorizontal()
 			|| !controller->enoughSpaceForFilters())) {
 		toggleFiltersMenu(true);
@@ -1508,6 +1542,12 @@ void Widget::setupStories() {
 	}, lifetime());
 
 	_stories->emptyValue() | rpl::skip(1) | rpl::on_next([=] {
+		updateStoriesVisibility();
+	}, lifetime());
+
+	// Novagram: hide the whole stories strip when the user enables "Hide stories".
+	Fenix::Get().hideStoriesChanges(
+	) | rpl::on_next([=] {
 		updateStoriesVisibility();
 	}, lifetime());
 
@@ -2396,6 +2436,7 @@ void Widget::updateStoriesVisibility() {
 		|| (widthAnimation && !suggestionsAnimation)
 		|| _childList
 		|| _stories->empty()
+		|| Fenix::Get().hideStories()
 		|| (_scroll->position().overscroll < -st::dialogsFilterSkip);
 	const auto hiddenAnimated = _searchHasFocus
 		|| _searchSuggestionsLocked
@@ -3970,7 +4011,12 @@ void Widget::updateControlsGeometry() {
 		+ st::dialogsFilterPadding.x();
 	const auto filterRight = st::dialogsFilterSkip
 		+ st::dialogsFilterPadding.x();
-	const auto filterWidth = qMax(ratiow, smallw) - filterLeft - filterRight;
+	// Novagram: reserve room for the always-on quick Ghost / Hide-stories
+	// toggles, so the search field shrinks instead of being overlapped.
+	const auto ghostWidth = st::dialogsGhost.width;
+	const auto storiesWidth = st::dialogsHideStories.width;
+	const auto filterWidth = qMax(ratiow, smallw)
+		- filterLeft - filterRight - ghostWidth - storiesWidth;
 	const auto filterAreaHeight = st::topBarHeight;
 	_searchControls->setGeometry(0, filterAreaTop, ratiow, filterAreaHeight);
 	if (_subsectionTopBar) {
@@ -4010,6 +4056,12 @@ void Widget::updateControlsGeometry() {
 
 	auto right = filterLeft + filterWidth;
 	_cancelSearch->moveToLeft(right - _cancelSearch->width(), _search->y());
+	// Novagram quick toggles sit in the reserved gap just past the search
+	// field's edge: Ghost first, then Hide-stories right after it.
+	_ghostToggle->moveToLeft(right, st::dialogsFilterPadding.y());
+	_hideStoriesToggle->moveToLeft(
+		right + ghostWidth,
+		st::dialogsFilterPadding.y());
 	right -= _jumpToDate->width();
 	_jumpToDate->moveToLeft(right, _search->y());
 	right -= _chooseFromUser->width();

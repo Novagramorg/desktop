@@ -2103,11 +2103,10 @@ void OverlayWidget::fillContextMenuActions(
 				: &st::mediaMenuIconDownload));
 	}
 
-	// FenixUz: "Save story" — download any story regardless of the author's
-	// save restriction or the Premium gate, shown only when the normal save
-	// isn't already available to the user and the toggle is enabled.
+	// Novagram: "Save story" — download any story regardless of the author's
+	// save restriction or the Premium gate. Always available; shown only when
+	// the normal save isn't already offered to the user.
 	if (story
-		&& Fenix::Get().storyDownload()
 		&& !story->canDownloadChecked()
 		&& !story->unsupported()) {
 		addAction(
@@ -3002,7 +3001,7 @@ void OverlayWidget::notifyFileDialogShown(bool shown) {
 }
 
 void OverlayWidget::saveAs(bool force) {
-	// FenixUz: force skips both the author save-restriction and the Premium
+	// Novagram: force skips both the author save-restriction and the Premium
 	// gate, letting "Save story" download any story (parity with Android).
 	if (!force) {
 		if (showCopyMediaRestriction(true)) {
