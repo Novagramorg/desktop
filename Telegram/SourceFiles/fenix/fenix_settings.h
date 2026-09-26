@@ -104,6 +104,12 @@ public:
 	[[nodiscard]] int messageReminderDelay() const;
 	void setMessageReminderDelay(int minutes);
 
+	// Approve incoming join requests in chats where you can add members.
+	[[nodiscard]] bool autoAcceptJoin() const;
+	void setAutoAcceptJoin(bool value);
+	[[nodiscard]] rpl::producer<bool> autoAcceptJoinChanges() const;
+	[[nodiscard]] rpl::producer<bool> autoAcceptJoinValue() const;
+
 private:
 	Settings();
 	~Settings() = default;
@@ -149,6 +155,9 @@ private:
 	bool _messageReminder = false;
 	rpl::event_stream<bool> _messageReminderChanges;
 	int _messageReminderDelay = 5;
+
+	bool _autoAcceptJoin = false;
+	rpl::event_stream<bool> _autoAcceptJoinChanges;
 };
 
 [[nodiscard]] inline Settings &Get() {

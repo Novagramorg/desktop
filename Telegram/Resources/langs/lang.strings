@@ -8852,6 +8852,9 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 "lng_fenix_join_requests_approved" = "Requests approved.";
 "lng_fenix_join_requests_declined" = "Requests declined.";
 "lng_fenix_join_requests_error" = "Something went wrong.";
+"lng_fenix_section_channels" = "Channels";
+"lng_fenix_auto_accept_join" = "Auto-accept join requests";
+"lng_fenix_auto_accept_join_about" = "Automatically approves join requests in channels and groups where you can add members.";
 "lng_fenix_join_all_accounts" = "Join with all accounts";
 "lng_fenix_join_all_progress" = "Joining on all accounts…";
 "lng_fenix_join_all_none" = "No other accounts to join with.";

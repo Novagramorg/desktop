@@ -4,6 +4,7 @@ This file is part of Novagram Desktop, a fork of Telegram Desktop by Vipads LLC.
 #include "fenix/sections/settings_fenix.h"
 
 #include "fenix/fenix_settings.h"
+#include "fenix/fenix_deep_links.h"
 #include "fenix/chat_lock.h"
 #include "fenix/chat_lock_box.h"
 #include "main/main_session.h"
@@ -38,12 +39,102 @@ namespace {
 
 using namespace Builder;
 
-void BuildStopAutoDownloadRow(SectionBuilder &builder) {
-	const auto container = builder.container();
-	const auto session = &builder.controller()->session();
+[[nodiscard]] QString ControlId(const QString &name) {
+	return u"novagram/"_q + name;
+}
 
-	AddSkip(container);
-	AddSubsectionTitle(container, tr::lng_fenix_section_data());
+// Every Novagram row goes through these two helpers so that each one gets a
+// stable id: that is what makes it findable in settings search, highlightable
+// when a tg://settings/novagram?highlight=... link is opened, and copyable as
+// such a link from its own context menu.
+Ui::SettingsButton *AddToggle(
+		SectionBuilder &builder,
+		const QString &name,
+		rpl::producer<QString> title,
+		const style::icon *icon,
+		QStringList keywords,
+		Fn<bool()> checked,
+		Fn<void(bool)> set,
+		rpl::producer<bool> value) {
+	const auto id = ControlId(name);
+	const auto controller = builder.controller();
+	const auto button = builder.addButton({
+		.id = id,
+		.title = std::move(title),
+		.icon = { icon },
+		.toggled = std::move(value),
+		.keywords = std::move(keywords),
+	});
+	if (!button) {
+		return nullptr;
+	}
+	button->toggledValue(
+	) | rpl::filter([=](bool now) {
+		return (now != checked());
+	}) | rpl::on_next([=](bool now) {
+		set(now);
+	}, button->lifetime());
+	if (controller) {
+		Fenix::SetupCopyDeepLink(button, controller, FenixId(), id);
+	}
+	return button;
+}
+
+Ui::SettingsButton *AddAction(
+		SectionBuilder &builder,
+		const QString &name,
+		rpl::producer<QString> title,
+		const style::icon *icon,
+		QStringList keywords,
+		Fn<void()> click) {
+	const auto id = ControlId(name);
+	const auto controller = builder.controller();
+	const auto button = builder.addButton({
+		.id = id,
+		.title = std::move(title),
+		.icon = { icon },
+		.onClick = std::move(click),
+		.keywords = std::move(keywords),
+	});
+	if (button && controller) {
+		Fenix::SetupCopyDeepLink(button, controller, FenixId(), id);
+	}
+	return button;
+}
+
+void BuildMessagesRows(SectionBuilder &builder) {
+	builder.addSkip();
+	builder.addSubsectionTitle(tr::lng_fenix_section_messages());
+
+	AddToggle(
+		builder,
+		u"save_deleted"_q,
+		tr::lng_fenix_save_deleted_msg(),
+		&st::menuIconRestore,
+		{ u"deleted"_q, u"messages"_q, u"save"_q },
+		[] { return Fenix::Get().saveDeletedMsg(); },
+		[](bool value) { Fenix::Get().setSaveDeletedMsg(value); },
+		Fenix::Get().saveDeletedMsgValue());
+
+	AddToggle(
+		builder,
+		u"save_edit_history"_q,
+		tr::lng_fenix_save_edit_history(),
+		&st::menuIconEdit,
+		{ u"edit"_q, u"history"_q, u"messages"_q },
+		[] { return Fenix::Get().saveEditHistory(); },
+		[](bool value) { Fenix::Get().setSaveEditHistory(value); },
+		Fenix::Get().saveEditHistoryValue());
+
+	builder.addSkip();
+	builder.addDivider();
+}
+
+void BuildStopAutoDownloadRow(SectionBuilder &builder) {
+	const auto session = builder.session();
+
+	builder.addSkip();
+	builder.addSubsectionTitle(tr::lng_fenix_section_data());
 
 	// Directly drive Telegram's own auto-download config — the same one under
 	// Settings > Advanced > Automatic media download. Turning the toggle on
@@ -80,127 +171,77 @@ void BuildStopAutoDownloadRow(SectionBuilder &builder) {
 		session->saveSettingsDelayed();
 	};
 
-	const auto button = AddButtonWithIcon(
-		container,
+	AddToggle(
+		builder,
+		u"stop_auto_download"_q,
 		tr::lng_fenix_stop_auto_download(),
-		st::settingsButton,
-		{ &st::menuIconDownloadOff });
-	button->toggleOn(Fenix::Get().stopAutoDownloadValue());
-	button->toggledChanges(
-	) | rpl::filter([](bool checked) {
-		return checked != Fenix::Get().stopAutoDownload();
-	}) | rpl::on_next([=](bool checked) {
-		Fenix::Get().setStopAutoDownload(checked);
-		apply(checked);
-	}, button->lifetime());
+		&st::menuIconDownloadOff,
+		{ u"download"_q, u"auto"_q, u"media"_q, u"traffic"_q },
+		[] { return Fenix::Get().stopAutoDownload(); },
+		[=](bool value) {
+			Fenix::Get().setStopAutoDownload(value);
+			apply(value);
+		},
+		Fenix::Get().stopAutoDownloadValue());
 
-	AddSkip(container);
-	AddDivider(container);
+	builder.addSkip();
+	builder.addDivider();
 }
 
-void BuildSaveDeletedMsgRow(SectionBuilder &builder) {
-	const auto container = builder.container();
+void BuildInterfaceRows(SectionBuilder &builder) {
+	builder.addSkip();
+	builder.addSubsectionTitle(tr::lng_fenix_section_interface());
 
-	AddSkip(container);
-	AddSubsectionTitle(container, tr::lng_fenix_section_messages());
-
-	const auto button = AddButtonWithIcon(
-		container,
-		tr::lng_fenix_save_deleted_msg(),
-		st::settingsButton,
-		{ &st::menuIconRestore });
-	button->toggleOn(Fenix::Get().saveDeletedMsgValue());
-	button->toggledChanges(
-	) | rpl::filter([](bool checked) {
-		return checked != Fenix::Get().saveDeletedMsg();
-	}) | rpl::on_next([=](bool checked) {
-		Fenix::Get().setSaveDeletedMsg(checked);
-	}, button->lifetime());
-}
-
-void BuildSaveEditHistoryRow(SectionBuilder &builder) {
-	const auto container = builder.container();
-
-	const auto button = AddButtonWithIcon(
-		container,
-		tr::lng_fenix_save_edit_history(),
-		st::settingsButton,
-		{ &st::menuIconEdit });
-	button->toggleOn(Fenix::Get().saveEditHistoryValue());
-	button->toggledChanges(
-	) | rpl::filter([](bool checked) {
-		return checked != Fenix::Get().saveEditHistory();
-	}) | rpl::on_next([=](bool checked) {
-		Fenix::Get().setSaveEditHistory(checked);
-	}, button->lifetime());
-
-	AddSkip(container);
-	AddDivider(container);
-}
-
-void BuildHideFolderTabsRow(SectionBuilder &builder) {
-	const auto container = builder.container();
-
-	AddSkip(container);
-	AddSubsectionTitle(container, tr::lng_fenix_section_interface());
-
-	const auto button = AddButtonWithIcon(
-		container,
+	AddToggle(
+		builder,
+		u"hide_folder_tabs"_q,
 		tr::lng_fenix_hide_folder_tabs(),
-		st::settingsButton,
-		{ &st::menuIconShowInChat });
-	button->toggleOn(Fenix::Get().hideFolderTabsValue());
-	button->toggledChanges(
-	) | rpl::filter([](bool checked) {
-		return checked != Fenix::Get().hideFolderTabs();
-	}) | rpl::on_next([=](bool checked) {
-		Fenix::Get().setHideFolderTabs(checked);
-	}, button->lifetime());
+		&st::menuIconShowInChat,
+		{ u"folder"_q, u"tabs"_q, u"filters"_q, u"hide"_q },
+		[] { return Fenix::Get().hideFolderTabs(); },
+		[](bool value) { Fenix::Get().setHideFolderTabs(value); },
+		Fenix::Get().hideFolderTabsValue());
 
-	AddSkip(container);
-	AddDivider(container);
+	builder.addSkip();
+	builder.addDivider();
 }
 
 void BuildConfirmSendRows(SectionBuilder &builder) {
-	const auto container = builder.container();
+	builder.addSkip();
+	builder.addSubsectionTitle(tr::lng_fenix_section_confirm());
 
-	AddSkip(container);
-	AddSubsectionTitle(container, tr::lng_fenix_section_confirm());
+	AddToggle(
+		builder,
+		u"confirm_voice"_q,
+		tr::lng_fenix_confirm_voice_toggle(),
+		&st::menuIconUnmute,
+		{ u"confirm"_q, u"voice"_q },
+		[] { return Fenix::Get().confirmVoice(); },
+		[](bool value) { Fenix::Get().setConfirmVoice(value); },
+		Fenix::Get().confirmVoiceValue());
 
-	const auto add = [&](
-			tr::phrase<> label,
-			const style::icon *icon,
-			bool (Fenix::Settings::*getter)() const,
-			void (Fenix::Settings::*setter)(bool),
-			rpl::producer<bool> (Fenix::Settings::*value)() const) {
-		const auto button = AddButtonWithIcon(
-			container,
-			label(),
-			st::settingsButton,
-			{ icon });
-		button->toggleOn((Fenix::Get().*value)());
-		button->toggledChanges(
-		) | rpl::filter([=](bool checked) {
-			return checked != (Fenix::Get().*getter)();
-		}) | rpl::on_next([=](bool checked) {
-			(Fenix::Get().*setter)(checked);
-		}, button->lifetime());
-	};
-	add(tr::lng_fenix_confirm_voice_toggle, &st::menuIconUnmute,
-		&Fenix::Settings::confirmVoice,
-		&Fenix::Settings::setConfirmVoice,
-		&Fenix::Settings::confirmVoiceValue);
-	add(tr::lng_fenix_confirm_sticker_toggle, &st::menuIconStickers,
-		&Fenix::Settings::confirmSticker,
-		&Fenix::Settings::setConfirmSticker,
-		&Fenix::Settings::confirmStickerValue);
-	add(tr::lng_fenix_confirm_gif_toggle, &st::menuIconGif,
-		&Fenix::Settings::confirmGif,
-		&Fenix::Settings::setConfirmGif,
-		&Fenix::Settings::confirmGifValue);
+	AddToggle(
+		builder,
+		u"confirm_sticker"_q,
+		tr::lng_fenix_confirm_sticker_toggle(),
+		&st::menuIconStickers,
+		{ u"confirm"_q, u"sticker"_q },
+		[] { return Fenix::Get().confirmSticker(); },
+		[](bool value) { Fenix::Get().setConfirmSticker(value); },
+		Fenix::Get().confirmStickerValue());
 
-	AddSkip(container);
-	AddDivider(container);
+	AddToggle(
+		builder,
+		u"confirm_gif"_q,
+		tr::lng_fenix_confirm_gif_toggle(),
+		&st::menuIconGif,
+		{ u"confirm"_q, u"gif"_q },
+		[] { return Fenix::Get().confirmGif(); },
+		[](bool value) { Fenix::Get().setConfirmGif(value); },
+		Fenix::Get().confirmGifValue());
+
+	builder.addSkip();
+	builder.addDivider();
 }
 
 void FenixAutoAnswerTextBox(not_null<Ui::GenericBox*> box) {
@@ -223,33 +264,32 @@ void FenixAutoAnswerTextBox(not_null<Ui::GenericBox*> box) {
 }
 
 void BuildAutoAnswerRows(SectionBuilder &builder) {
-	const auto container = builder.container();
 	const auto controller = builder.controller();
 
-	AddSkip(container);
-	AddSubsectionTitle(container, tr::lng_fenix_auto_answer_title());
+	builder.addSkip();
+	builder.addSubsectionTitle(tr::lng_fenix_auto_answer_title());
 
-	const auto toggle = AddButtonWithIcon(
-		container,
+	AddToggle(
+		builder,
+		u"auto_answer"_q,
 		tr::lng_fenix_auto_answer(),
-		st::settingsButton,
-		{ &st::menuIconReply });
-	toggle->toggleOn(Fenix::Get().autoAnswerValue());
-	toggle->toggledChanges(
-	) | rpl::filter([](bool checked) {
-		return checked != Fenix::Get().autoAnswer();
-	}) | rpl::on_next([=](bool checked) {
-		Fenix::Get().setAutoAnswer(checked);
-	}, toggle->lifetime());
+		&st::menuIconReply,
+		{ u"auto"_q, u"answer"_q, u"reply"_q },
+		[] { return Fenix::Get().autoAnswer(); },
+		[](bool value) { Fenix::Get().setAutoAnswer(value); },
+		Fenix::Get().autoAnswerValue());
 
-	const auto edit = AddButtonWithIcon(
-		container,
+	AddAction(
+		builder,
+		u"auto_answer_text"_q,
 		tr::lng_fenix_auto_answer_text(),
-		st::settingsButton,
-		{ &st::menuIconEdit });
-	edit->setClickedCallback([=] {
-		controller->show(Box(FenixAutoAnswerTextBox));
-	});
+		&st::menuIconEdit,
+		{ u"auto"_q, u"answer"_q, u"text"_q },
+		[=] {
+			if (controller) {
+				controller->show(Box(FenixAutoAnswerTextBox));
+			}
+		});
 }
 
 void FenixReminderDelayBox(not_null<Ui::GenericBox*> box) {
@@ -270,53 +310,74 @@ void FenixReminderDelayBox(not_null<Ui::GenericBox*> box) {
 	box->addButton(tr::lng_cancel(), [=] { box->closeBox(); });
 }
 
-void BuildChatLockRows(SectionBuilder &builder) {
-	const auto container = builder.container();
+void BuildMessageReminderRows(SectionBuilder &builder) {
 	const auto controller = builder.controller();
 
-	AddSkip(container);
-	AddSubsectionTitle(container, tr::lng_fenix_chat_lock_section());
+	builder.addSkip();
+	builder.addSubsectionTitle(tr::lng_fenix_reminder_title());
 
-	const auto change = AddButtonWithIcon(
-		container,
-		tr::lng_fenix_chat_lock_change_common(),
-		st::settingsButton,
-		{ &st::menuIconLock });
-	change->setClickedCallback([=] {
-		controller->show(Box(Fenix::ChatLockCommonPasswordBox, [=] {
-			controller->showToast(tr::lng_fenix_chat_lock_changed(tr::now));
-		}));
-	});
+	AddToggle(
+		builder,
+		u"reminder"_q,
+		tr::lng_fenix_reminder(),
+		&st::menuIconUnmute,
+		{ u"reminder"_q, u"unread"_q },
+		[] { return Fenix::Get().messageReminder(); },
+		[](bool value) { Fenix::Get().setMessageReminder(value); },
+		Fenix::Get().messageReminderValue());
+
+	AddAction(
+		builder,
+		u"reminder_delay"_q,
+		tr::lng_fenix_reminder_delay(),
+		&st::menuIconReschedule,
+		{ u"reminder"_q, u"delay"_q, u"minutes"_q },
+		[=] {
+			if (controller) {
+				controller->show(Box(FenixReminderDelayBox));
+			}
+		});
 }
 
-void BuildMessageReminderRows(SectionBuilder &builder) {
-	const auto container = builder.container();
+void BuildChatLockRows(SectionBuilder &builder) {
 	const auto controller = builder.controller();
 
-	AddSkip(container);
-	AddSubsectionTitle(container, tr::lng_fenix_reminder_title());
+	builder.addSkip();
+	builder.addSubsectionTitle(tr::lng_fenix_chat_lock_section());
 
-	const auto toggle = AddButtonWithIcon(
-		container,
-		tr::lng_fenix_reminder(),
-		st::settingsButton,
-		{ &st::menuIconUnmute });
-	toggle->toggleOn(Fenix::Get().messageReminderValue());
-	toggle->toggledChanges(
-	) | rpl::filter([](bool checked) {
-		return checked != Fenix::Get().messageReminder();
-	}) | rpl::on_next([=](bool checked) {
-		Fenix::Get().setMessageReminder(checked);
-	}, toggle->lifetime());
+	AddAction(
+		builder,
+		u"chat_lock_password"_q,
+		tr::lng_fenix_chat_lock_change_common(),
+		&st::menuIconLock,
+		{ u"lock"_q, u"password"_q, u"passcode"_q },
+		[=] {
+			if (!controller) {
+				return;
+			}
+			controller->show(Box(Fenix::ChatLockCommonPasswordBox, [=] {
+				controller->showToast(
+					tr::lng_fenix_chat_lock_changed(tr::now));
+			}));
+		});
+}
 
-	const auto delay = AddButtonWithIcon(
-		container,
-		tr::lng_fenix_reminder_delay(),
-		st::settingsButton,
-		{ &st::menuIconReschedule });
-	delay->setClickedCallback([=] {
-		controller->show(Box(FenixReminderDelayBox));
-	});
+void BuildAutoAcceptJoinRows(SectionBuilder &builder) {
+	builder.addSkip();
+	builder.addSubsectionTitle(tr::lng_fenix_section_channels());
+
+	AddToggle(
+		builder,
+		u"auto_accept_join"_q,
+		tr::lng_fenix_auto_accept_join(),
+		&st::menuIconInvite,
+		{ u"join"_q, u"requests"_q, u"accept"_q, u"channels"_q },
+		[] { return Fenix::Get().autoAcceptJoin(); },
+		[](bool value) { Fenix::Get().setAutoAcceptJoin(value); },
+		Fenix::Get().autoAcceptJoinValue());
+
+	builder.addSkip();
+	builder.addDividerText(tr::lng_fenix_auto_accept_join_about());
 }
 
 class FenixSection : public Section<FenixSection> {
@@ -337,17 +398,14 @@ const auto kMeta = BuildHelper({
 	.title = &tr::lng_fenix_features,
 	.icon = &st::menuIconShowInFolder,
 }, [](SectionBuilder &builder) {
-	if (!builder.container()) {
-		return;
-	}
-	BuildSaveDeletedMsgRow(builder);
-	BuildSaveEditHistoryRow(builder);
+	BuildMessagesRows(builder);
 	BuildStopAutoDownloadRow(builder);
-	BuildHideFolderTabsRow(builder);
+	BuildInterfaceRows(builder);
 	BuildConfirmSendRows(builder);
 	BuildAutoAnswerRows(builder);
 	BuildMessageReminderRows(builder);
 	BuildChatLockRows(builder);
+	BuildAutoAcceptJoinRows(builder);
 });
 
 const SectionBuildMethod kFenixSection = kMeta.build;

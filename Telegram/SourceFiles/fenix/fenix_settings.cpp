@@ -320,6 +320,28 @@ void Settings::setMessageReminderDelay(int minutes) {
 	save();
 }
 
+bool Settings::autoAcceptJoin() const {
+	return _autoAcceptJoin;
+}
+
+void Settings::setAutoAcceptJoin(bool value) {
+	if (_autoAcceptJoin == value) {
+		return;
+	}
+	_autoAcceptJoin = value;
+	save();
+	_autoAcceptJoinChanges.fire_copy(value);
+}
+
+rpl::producer<bool> Settings::autoAcceptJoinChanges() const {
+	return _autoAcceptJoinChanges.events();
+}
+
+rpl::producer<bool> Settings::autoAcceptJoinValue() const {
+	return rpl::single(_autoAcceptJoin)
+		| rpl::then(_autoAcceptJoinChanges.events());
+}
+
 void Settings::load() {
 	auto file = QFile(FilePath());
 	if (!file.open(QIODevice::ReadOnly)) {
@@ -355,6 +377,7 @@ void Settings::load() {
 		root.value(u"message_reminder_delay"_q).toInt(5),
 		1,
 		59);
+	_autoAcceptJoin = root.value(u"auto_accept_join"_q).toBool(false);
 }
 
 void Settings::save() {
@@ -374,6 +397,7 @@ void Settings::save() {
 	root.insert(u"auto_answer_text"_q, _autoAnswerText);
 	root.insert(u"message_reminder"_q, _messageReminder);
 	root.insert(u"message_reminder_delay"_q, _messageReminderDelay);
+	root.insert(u"auto_accept_join"_q, _autoAcceptJoin);
 
 	const auto path = FilePath();
 	QDir().mkpath(QFileInfo(path).absolutePath());

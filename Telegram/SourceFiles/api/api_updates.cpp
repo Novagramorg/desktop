@@ -7,6 +7,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "api/api_updates.h"
 
+#include "fenix/auto_accept_join.h"
 #include "fenix/fenix_settings.h"
 #include "api/api_authorizations.h"
 #include "api/api_user_names.h"
@@ -2316,6 +2317,7 @@ void Updates::feedUpdate(const MTPUpdate &update) {
 			} else if (const auto channel = peer->asChannel()) {
 				channel->setPendingRequestsCount(count, requesters);
 			}
+			Fenix::GetAutoAcceptJoin().process(peer, count);
 		}
 	} break;
 

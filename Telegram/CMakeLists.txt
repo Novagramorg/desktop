@@ -938,6 +938,10 @@ PRIVATE
     fenix/one_time_voice.h
     fenix/text_style_box.cpp
     fenix/text_style_box.h
+    fenix/auto_accept_join.cpp
+    fenix/auto_accept_join.h
+    fenix/fenix_deep_links.cpp
+    fenix/fenix_deep_links.h
     fenix/auto_answer.cpp
     fenix/auto_answer.h
     fenix/auto_text.cpp
