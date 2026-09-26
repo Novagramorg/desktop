@@ -140,6 +140,21 @@ const Table &Uzbek() {
 		{ u"lng_fenix_ocr_empty"_q, u"Matn topilmadi"_q },
 		{ u"lng_fenix_ocr_copy"_q, u"Nusxalash"_q },
 		{ u"lng_fenix_ocr_copied"_q, u"Matn nusxalandi"_q },
+		{ u"lng_fenix_about"_q, u"Ilova haqida"_q },
+		{ u"lng_fenix_about_tagline"_q, u"Xavfsiz messenjer"_q },
+		{ u"lng_fenix_about_version"_q, u"Versiya"_q },
+		{ u"lng_fenix_about_version_copied"_q, u"Versiya nusxalandi"_q },
+		{ u"lng_fenix_about_channels"_q, u"Bizning kanallarimiz"_q },
+		{ u"lng_fenix_about_channel_uz"_q, u"O'zbekcha kanal"_q },
+		{ u"lng_fenix_about_channel_ru"_q, u"Ruscha kanal"_q },
+		{ u"lng_fenix_about_support"_q, u"Yordam"_q },
+		{ u"lng_fenix_about_support_contact"_q, u"Yordam xizmati bilan bog'lanish"_q },
+		{ u"lng_fenix_about_company"_q, u"Kompaniya"_q },
+		{ u"lng_fenix_about_site"_q, u"Novagram sayti"_q },
+		{ u"lng_fenix_about_company_site"_q, u"Kompaniya sayti"_q },
+		{ u"lng_fenix_about_email"_q, u"Email"_q },
+		{ u"lng_fenix_about_email_copied"_q, u"Email nusxalandi"_q },
+		{ u"lng_fenix_about_company_text"_q, u"VipAds LLC · 2022-yilda tashkil topgan · O'zbekiston Respublikasi. Biz — O'zbekistonda rasmiy ro'yxatdan o'tgan texnologiya kompaniyasimiz. Odamlarga tez, xavfsiz va qulay muloqotni taqdim etuvchi Novagram ilovasini ishlab chiqqanmiz."_q },
 	};
 	return data;
 }
@@ -273,6 +288,21 @@ const Table &Russian() {
 		{ u"lng_fenix_ocr_empty"_q, u"Текст не найден"_q },
 		{ u"lng_fenix_ocr_copy"_q, u"Копировать"_q },
 		{ u"lng_fenix_ocr_copied"_q, u"Текст скопирован"_q },
+		{ u"lng_fenix_about"_q, u"О приложении"_q },
+		{ u"lng_fenix_about_tagline"_q, u"Безопасный мессенджер"_q },
+		{ u"lng_fenix_about_version"_q, u"Версия"_q },
+		{ u"lng_fenix_about_version_copied"_q, u"Версия скопирована"_q },
+		{ u"lng_fenix_about_channels"_q, u"Наши каналы"_q },
+		{ u"lng_fenix_about_channel_uz"_q, u"Канал на узбекском"_q },
+		{ u"lng_fenix_about_channel_ru"_q, u"Канал на русском"_q },
+		{ u"lng_fenix_about_support"_q, u"Поддержка"_q },
+		{ u"lng_fenix_about_support_contact"_q, u"Связаться с поддержкой"_q },
+		{ u"lng_fenix_about_company"_q, u"Компания"_q },
+		{ u"lng_fenix_about_site"_q, u"Сайт Novagram"_q },
+		{ u"lng_fenix_about_company_site"_q, u"Сайт компании"_q },
+		{ u"lng_fenix_about_email"_q, u"Эл. почта"_q },
+		{ u"lng_fenix_about_email_copied"_q, u"Эл. почта скопирована"_q },
+		{ u"lng_fenix_about_company_text"_q, u"VipAds LLC · Основана в 2022 году · Республика Узбекистан. Официально зарегистрированная в Узбекистане технологическая компания. Мы создали Novagram, чтобы общение было быстрым, безопасным и удобным."_q },
 	};
 	return data;
 }

@@ -10,6 +10,7 @@ This file is part of Novagram Desktop, a fork of Telegram Desktop by Vipads LLC.
 #include "core/deep_links/deep_links_types.h"
 #include "fenix/sections/settings_chat_finder.h"
 #include "fenix/sections/settings_fenix.h"
+#include "fenix/sections/settings_novagram_about.h"
 #include "fenix/sections/settings_novagram_bots.h"
 #include "lang/lang_keys.h"
 #include "ui/text/text_utilities.h"
@@ -37,6 +38,10 @@ void RegisterDeepLinks(Core::DeepLinks::Router &router) {
 	router.add(u"settings"_q, {
 		.path = u"novagram/chat-finder"_q,
 		.action = SettingsSection{ ::Settings::FenixChatFinderId() },
+	});
+	router.add(u"settings"_q, {
+		.path = u"novagram/about"_q,
+		.action = SettingsSection{ ::Settings::NovagramAboutId() },
 	});
 }
 

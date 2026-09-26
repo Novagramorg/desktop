@@ -959,6 +959,8 @@ PRIVATE
     fenix/photo_to_text_win.cpp
     fenix/sections/settings_chat_finder.cpp
     fenix/sections/settings_chat_finder.h
+    fenix/sections/settings_novagram_about.cpp
+    fenix/sections/settings_novagram_about.h
     fenix/sections/settings_novagram_bots.cpp
     fenix/sections/settings_novagram_bots.h
     fenix/demo_number.cpp

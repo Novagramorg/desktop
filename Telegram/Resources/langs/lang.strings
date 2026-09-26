@@ -8891,6 +8891,21 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 "lng_fenix_ocr_empty" = "No text found";
 "lng_fenix_ocr_copy" = "Copy";
 "lng_fenix_ocr_copied" = "Text copied";
+"lng_fenix_about" = "About";
+"lng_fenix_about_tagline" = "Secure messenger";
+"lng_fenix_about_version" = "Version";
+"lng_fenix_about_version_copied" = "Version copied";
+"lng_fenix_about_channels" = "Our channels";
+"lng_fenix_about_channel_uz" = "Uzbek channel";
+"lng_fenix_about_channel_ru" = "Russian channel";
+"lng_fenix_about_support" = "Support";
+"lng_fenix_about_support_contact" = "Contact support";
+"lng_fenix_about_company" = "Company";
+"lng_fenix_about_site" = "Novagram website";
+"lng_fenix_about_company_site" = "Company website";
+"lng_fenix_about_email" = "Email";
+"lng_fenix_about_email_copied" = "Email copied";
+"lng_fenix_about_company_text" = "VipAds LLC · Founded 2022 · Republic of Uzbekistan. A legally registered technology company in Uzbekistan. We built Novagram to give people fast, secure, and effortless communication.";
 
 "lng_rich_paste_toast" = "Pasted as plain text";
 "lng_rich_paste_toast_editor" = "Restore formatting in editor";

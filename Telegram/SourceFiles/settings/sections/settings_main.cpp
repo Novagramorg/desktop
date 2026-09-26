@@ -48,6 +48,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "settings/sections/settings_advanced.h"
 #include "fenix/sections/settings_fenix.h"
 #include "fenix/sections/settings_chat_finder.h"
+#include "fenix/sections/settings_novagram_about.h"
 #include "fenix/sections/settings_novagram_bots.h"
 #include "settings/sections/settings_business.h"
 #include "settings/sections/settings_calls.h"
@@ -458,6 +459,13 @@ void BuildSectionButtons(SectionBuilder &builder) {
 		.targetSection = FenixChatFinderId(),
 		.icon = { &st::menuIconSearch },
 		.keywords = { u"username"_q, u"find"_q, u"chat"_q, u"finder"_q },
+	});
+
+	builder.addSectionButton({
+		.title = tr::lng_fenix_about(),
+		.targetSection = NovagramAboutId(),
+		.icon = { &st::menuIconInfo },
+		.keywords = { u"about"_q, u"novagram"_q, u"support"_q, u"version"_q },
 	});
 
 	builder.addSectionButton({
