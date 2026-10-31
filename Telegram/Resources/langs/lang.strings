@@ -8797,6 +8797,8 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 "lng_fenix_hide_folder_tabs_about" = "Hides the folder/filter tabs row from the chat list, even when you have several folders.";
 "lng_fenix_section_stories" = "Stories";
 "lng_fenix_hide_stories" = "Hide stories";
+"lng_fenix_story_ghost" = "View stories anonymously";
+"lng_fenix_story_ghost_about" = "When enabled, story owners won't see that you viewed their stories. Ghost Mode already includes this.";
 "lng_fenix_section_confirm" = "Confirm before sending";
 "lng_fenix_confirm_voice_toggle" = "Confirm voice messages";
 "lng_fenix_confirm_sticker_toggle" = "Confirm stickers";
@@ -8893,6 +8895,9 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 "lng_fenix_ocr_copied" = "Text copied";
 "lng_fenix_about" = "About";
 "lng_fenix_about_tagline" = "Secure messenger";
+"lng_fenix_avatar_profile" = "Avatar opens profile";
+"lng_fenix_show_seconds" = "Show seconds";
+"lng_fenix_avatar_profile_about" = "In the chat list, clicking a chat's avatar opens its profile instead of the chat. Unread stories still open first.";
 "lng_fenix_about_version" = "Version";
 "lng_fenix_about_version_copied" = "Version copied";
 "lng_fenix_about_channels" = "Our channels";

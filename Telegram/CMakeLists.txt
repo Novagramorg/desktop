@@ -944,6 +944,8 @@ PRIVATE
     fenix/fenix_deep_links.h
     fenix/auto_answer.cpp
     fenix/auto_answer.h
+    fenix/clock_format.cpp
+    fenix/clock_format.h
     fenix/auto_text.cpp
     fenix/auto_text.h
     fenix/auto_text_box.cpp

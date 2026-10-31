@@ -19,6 +19,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "data/data_photo.h"
 #include "data/data_session.h"
 #include "data/data_user.h"
+#include "fenix/fenix_settings.h"
 #include "history/history.h"
 #include "history/view/history_view_element.h"
 #include "lang/lang_keys.h"
@@ -728,6 +729,12 @@ void SponsoredMessages::view(const FullMsgId &fullId) {
 }
 
 void SponsoredMessages::view(const QByteArray &randomId) {
+	// Novagram: every ad surface (chat, search, bot panel, video) reports
+	// its impression through here. Ghost mode still shows the ad but never
+	// tells the server it was seen, matching the Android behavior.
+	if (Fenix::Get().ghostMode()) {
+		return;
+	}
 	auto &request = _viewRequests[randomId];
 	if (request.requestId || TooEarlyForRequest(request.lastReceived)) {
 		return;

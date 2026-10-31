@@ -9,6 +9,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 
 #include "dialogs/dialogs_key.h"
 #include "dialogs/dialogs_indexed_list.h"
+#include "fenix/clock_format.h"
 #include "base/options.h"
 #include "base/unixtime.h"
 #include "data/data_changes.h"
@@ -350,13 +351,16 @@ DateText ResolveDateText(
 		LastNow = now;
 		LastTodaySerial = int(QDate::currentDate().toJulianDay());
 	}
+	const auto clockSerial = Fenix::ClockSerial();
 	if (cache.messageTimeId != date
-		|| cache.todaySerial != LastTodaySerial) {
+		|| cache.todaySerial != LastTodaySerial
+		|| cache.clockSerial != clockSerial) {
 		const auto qdt = base::unixtime::parse(date);
-		cache.text = Ui::FormatDialogsDate(qdt);
+		cache.text = Fenix::DialogsDateText(qdt);
 		cache.width = st::dialogsDateFont->width(cache.text);
 		cache.messageTimeId = date;
 		cache.todaySerial = LastTodaySerial;
+		cache.clockSerial = clockSerial;
 	}
 	return { cache.text, cache.width };
 }

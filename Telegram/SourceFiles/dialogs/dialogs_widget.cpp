@@ -499,6 +499,13 @@ Widget::Widget(
 			active ? &st::dialogsHideStoriesActiveIconOver : nullptr);
 	}, lifetime());
 
+	// Novagram: row times are cached until the next paint, so repaint the
+	// list right away when "Show seconds" flips.
+	Fenix::Get().showSecondsChanges(
+	) | rpl::on_next([=] {
+		_inner->update();
+	}, lifetime());
+
 	_inner->updated(
 	) | rpl::on_next([=] {
 		listScrollUpdated();
@@ -1096,6 +1103,12 @@ void Widget::chosenRow(const ChosenRow &row) {
 		return;
 	} else if (userpicCommunity) {
 		controller()->showPeerInfo(userpicCommunity);
+		return;
+	} else if (history
+		&& row.userpicClick
+		&& (row.message.fullId.msg == ShowAtUnreadMsgId)
+		&& Fenix::Get().avatarOpensProfile()) {
+		controller()->showPeerInfo(history->peer);
 		return;
 	} else if (history
 		&& !row.message.fullId

@@ -1234,10 +1234,11 @@ void Stories::loadAround(FullStoryId id, StoriesContext context) {
 }
 
 void Stories::markAsRead(FullStoryId id, bool viewed) {
-	// Novagram: Ghost mode never marks a foreign story as viewed, so its
-	// author won't see that we watched it (and no view is counted). The
-	// story stays unread locally, matching the Android pro behavior.
-	if (Fenix::Get().ghostMode()) {
+	// Novagram: Ghost mode, and its stories-only variant, never marks a
+	// foreign story as viewed, so its author won't see that we watched it
+	// (and no view is counted). The story stays unread locally, matching
+	// the Android pro behavior.
+	if (Fenix::Get().ghostMode() || Fenix::Get().ghostStory()) {
 		return;
 	}
 	if (id.peer == _owner->session().userPeerId()) {

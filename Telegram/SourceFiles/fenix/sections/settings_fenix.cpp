@@ -188,6 +188,34 @@ void BuildStopAutoDownloadRow(SectionBuilder &builder) {
 	builder.addDivider();
 }
 
+void BuildStoriesRows(SectionBuilder &builder) {
+	builder.addSkip();
+	builder.addSubsectionTitle(tr::lng_fenix_section_stories());
+
+	AddToggle(
+		builder,
+		u"hide_stories"_q,
+		tr::lng_fenix_hide_stories(),
+		&st::menuIconStoriesArchive,
+		{ u"stories"_q, u"hide"_q },
+		[] { return Fenix::Get().hideStories(); },
+		[](bool value) { Fenix::Get().setHideStories(value); },
+		Fenix::Get().hideStoriesValue());
+
+	AddToggle(
+		builder,
+		u"story_ghost"_q,
+		tr::lng_fenix_story_ghost(),
+		&st::menuIconStealth,
+		{ u"stories"_q, u"ghost"_q, u"anonymous"_q, u"stealth"_q },
+		[] { return Fenix::Get().ghostStory(); },
+		[](bool value) { Fenix::Get().setGhostStory(value); },
+		Fenix::Get().ghostStoryValue());
+
+	builder.addSkip();
+	builder.addDividerText(tr::lng_fenix_story_ghost_about());
+}
+
 void BuildInterfaceRows(SectionBuilder &builder) {
 	builder.addSkip();
 	builder.addSubsectionTitle(tr::lng_fenix_section_interface());
@@ -202,8 +230,28 @@ void BuildInterfaceRows(SectionBuilder &builder) {
 		[](bool value) { Fenix::Get().setHideFolderTabs(value); },
 		Fenix::Get().hideFolderTabsValue());
 
+	AddToggle(
+		builder,
+		u"avatar_opens_profile"_q,
+		tr::lng_fenix_avatar_profile(),
+		&st::menuIconProfile,
+		{ u"avatar"_q, u"profile"_q, u"userpic"_q },
+		[] { return Fenix::Get().avatarOpensProfile(); },
+		[](bool value) { Fenix::Get().setAvatarOpensProfile(value); },
+		Fenix::Get().avatarOpensProfileValue());
+
+	AddToggle(
+		builder,
+		u"show_seconds"_q,
+		tr::lng_fenix_show_seconds(),
+		&st::menuIconReschedule,
+		{ u"seconds"_q, u"time"_q, u"clock"_q },
+		[] { return Fenix::Get().showSeconds(); },
+		[](bool value) { Fenix::Get().setShowSeconds(value); },
+		Fenix::Get().showSecondsValue());
+
 	builder.addSkip();
-	builder.addDivider();
+	builder.addDividerText(tr::lng_fenix_avatar_profile_about());
 }
 
 void BuildConfirmSendRows(SectionBuilder &builder) {
@@ -399,6 +447,7 @@ const auto kMeta = BuildHelper({
 	.icon = &st::menuIconShowInFolder,
 }, [](SectionBuilder &builder) {
 	BuildMessagesRows(builder);
+	BuildStoriesRows(builder);
 	BuildStopAutoDownloadRow(builder);
 	BuildInterfaceRows(builder);
 	BuildConfirmSendRows(builder);

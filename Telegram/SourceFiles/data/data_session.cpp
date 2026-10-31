@@ -439,6 +439,22 @@ Session::Session(not_null<Main::Session*> session)
 			requestItemViewRefresh(item);
 		}
 	}, _lifetime);
+
+	// Novagram: message bubbles keep the time they were laid out with, so
+	// toggling "Show seconds" refreshes every message that has a view.
+	Fenix::Get().showSecondsChanges(
+	) | rpl::on_next([=] {
+		auto refresh = std::vector<not_null<HistoryItem*>>();
+		refresh.reserve(_views.size());
+		for (const auto &[item, views] : _views) {
+			if (!views.empty()) {
+				refresh.push_back(views.front()->data());
+			}
+		}
+		for (const auto &item : refresh) {
+			notifyItemDataChange(item);
+		}
+	}, _lifetime);
 }
 
 void Session::subscribeForTopicRepliesLists() {

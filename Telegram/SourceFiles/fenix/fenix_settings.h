@@ -36,6 +36,12 @@ public:
 	[[nodiscard]] rpl::producer<bool> ghostModeChanges() const;
 	[[nodiscard]] rpl::producer<bool> ghostModeValue() const;
 
+	// Watch stories without marking them viewed. Ghost mode implies it.
+	[[nodiscard]] bool ghostStory() const;
+	void setGhostStory(bool value);
+	[[nodiscard]] rpl::producer<bool> ghostStoryChanges() const;
+	[[nodiscard]] rpl::producer<bool> ghostStoryValue() const;
+
 	[[nodiscard]] bool saveDeletedMsg() const;
 	void setSaveDeletedMsg(bool value);
 	[[nodiscard]] rpl::producer<bool> saveDeletedMsgChanges() const;
@@ -110,6 +116,18 @@ public:
 	[[nodiscard]] rpl::producer<bool> autoAcceptJoinChanges() const;
 	[[nodiscard]] rpl::producer<bool> autoAcceptJoinValue() const;
 
+	// Chat list: a click on a chat's avatar opens its profile.
+	[[nodiscard]] bool avatarOpensProfile() const;
+	void setAvatarOpensProfile(bool value);
+	[[nodiscard]] rpl::producer<bool> avatarOpensProfileChanges() const;
+	[[nodiscard]] rpl::producer<bool> avatarOpensProfileValue() const;
+
+	// Show seconds in clock times (chat list, message bubbles).
+	[[nodiscard]] bool showSeconds() const;
+	void setShowSeconds(bool value);
+	[[nodiscard]] rpl::producer<bool> showSecondsChanges() const;
+	[[nodiscard]] rpl::producer<bool> showSecondsValue() const;
+
 private:
 	Settings();
 	~Settings() = default;
@@ -119,6 +137,9 @@ private:
 
 	bool _ghostMode = false;
 	rpl::event_stream<bool> _ghostModeChanges;
+
+	bool _ghostStory = false;
+	rpl::event_stream<bool> _ghostStoryChanges;
 
 	bool _saveDeletedMsg = false;
 	rpl::event_stream<bool> _saveDeletedMsgChanges;
@@ -158,6 +179,12 @@ private:
 
 	bool _autoAcceptJoin = false;
 	rpl::event_stream<bool> _autoAcceptJoinChanges;
+
+	bool _avatarOpensProfile = false;
+	rpl::event_stream<bool> _avatarOpensProfileChanges;
+
+	bool _showSeconds = false;
+	rpl::event_stream<bool> _showSecondsChanges;
 };
 
 [[nodiscard]] inline Settings &Get() {

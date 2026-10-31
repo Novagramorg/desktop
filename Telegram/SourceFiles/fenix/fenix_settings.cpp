@@ -51,6 +51,27 @@ rpl::producer<bool> Settings::ghostModeValue() const {
 	return rpl::single(_ghostMode) | rpl::then(_ghostModeChanges.events());
 }
 
+bool Settings::ghostStory() const {
+	return _ghostStory;
+}
+
+void Settings::setGhostStory(bool value) {
+	if (_ghostStory == value) {
+		return;
+	}
+	_ghostStory = value;
+	save();
+	_ghostStoryChanges.fire_copy(value);
+}
+
+rpl::producer<bool> Settings::ghostStoryChanges() const {
+	return _ghostStoryChanges.events();
+}
+
+rpl::producer<bool> Settings::ghostStoryValue() const {
+	return rpl::single(_ghostStory) | rpl::then(_ghostStoryChanges.events());
+}
+
 bool Settings::saveDeletedMsg() const {
 	return _saveDeletedMsg;
 }
@@ -342,6 +363,50 @@ rpl::producer<bool> Settings::autoAcceptJoinValue() const {
 		| rpl::then(_autoAcceptJoinChanges.events());
 }
 
+bool Settings::avatarOpensProfile() const {
+	return _avatarOpensProfile;
+}
+
+void Settings::setAvatarOpensProfile(bool value) {
+	if (_avatarOpensProfile == value) {
+		return;
+	}
+	_avatarOpensProfile = value;
+	save();
+	_avatarOpensProfileChanges.fire_copy(value);
+}
+
+rpl::producer<bool> Settings::avatarOpensProfileChanges() const {
+	return _avatarOpensProfileChanges.events();
+}
+
+rpl::producer<bool> Settings::avatarOpensProfileValue() const {
+	return rpl::single(_avatarOpensProfile)
+		| rpl::then(_avatarOpensProfileChanges.events());
+}
+
+bool Settings::showSeconds() const {
+	return _showSeconds;
+}
+
+void Settings::setShowSeconds(bool value) {
+	if (_showSeconds == value) {
+		return;
+	}
+	_showSeconds = value;
+	save();
+	_showSecondsChanges.fire_copy(value);
+}
+
+rpl::producer<bool> Settings::showSecondsChanges() const {
+	return _showSecondsChanges.events();
+}
+
+rpl::producer<bool> Settings::showSecondsValue() const {
+	return rpl::single(_showSeconds)
+		| rpl::then(_showSecondsChanges.events());
+}
+
 void Settings::load() {
 	auto file = QFile(FilePath());
 	if (!file.open(QIODevice::ReadOnly)) {
@@ -357,6 +422,7 @@ void Settings::load() {
 	}
 	const auto root = doc.object();
 	_ghostMode = root.value(u"ghost_mode"_q).toBool(false);
+	_ghostStory = root.value(u"ghost_story"_q).toBool(false);
 	_saveDeletedMsg = root.value(u"save_deleted_msg"_q).toBool(false);
 	_saveEditHistory = root.value(u"save_edit_history"_q).toBool(false);
 	_hideFolderTabs = root.value(u"hide_folder_tabs"_q).toBool(false);
@@ -378,11 +444,14 @@ void Settings::load() {
 		1,
 		59);
 	_autoAcceptJoin = root.value(u"auto_accept_join"_q).toBool(false);
+	_avatarOpensProfile = root.value(u"avatar_opens_profile"_q).toBool(false);
+	_showSeconds = root.value(u"show_seconds"_q).toBool(false);
 }
 
 void Settings::save() {
 	auto root = QJsonObject();
 	root.insert(u"ghost_mode"_q, _ghostMode);
+	root.insert(u"ghost_story"_q, _ghostStory);
 	root.insert(u"save_deleted_msg"_q, _saveDeletedMsg);
 	root.insert(u"save_edit_history"_q, _saveEditHistory);
 	root.insert(u"hide_folder_tabs"_q, _hideFolderTabs);
@@ -398,6 +467,8 @@ void Settings::save() {
 	root.insert(u"message_reminder"_q, _messageReminder);
 	root.insert(u"message_reminder_delay"_q, _messageReminderDelay);
 	root.insert(u"auto_accept_join"_q, _autoAcceptJoin);
+	root.insert(u"avatar_opens_profile"_q, _avatarOpensProfile);
+	root.insert(u"show_seconds"_q, _showSeconds);
 
 	const auto path = FilePath();
 	QDir().mkpath(QFileInfo(path).absolutePath());
