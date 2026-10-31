@@ -67,6 +67,8 @@ private:
 	void offerSwitchLangPack();
 	bool showOfferSwitchBox();
 	Language findOfferedLanguage() const;
+	void requestUzbekLanguage(Languages official);
+	void applyLanguageList(Languages languages);
 
 	void requestLanguageAndSwitch(const QString &id, bool warning);
 	void applyLangPackData(Pack pack, const MTPDlangPackDifference &data);

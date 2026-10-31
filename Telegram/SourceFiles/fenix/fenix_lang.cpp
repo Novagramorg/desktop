@@ -1,5 +1,6 @@
 #include "fenix/fenix_lang.h"
 
+#include "lang/lang_file_parser.h"
 #include "lang/lang_instance.h"
 #include "lang/lang_keys.h"
 
@@ -38,9 +39,9 @@ const Table &Uzbek() {
 		{ u"lng_fenix_auto_translate_progress"_q, u"Tarjima qilinmoqda…"_q },
 		{ u"lng_fenix_auto_translate_failed"_q, u"Tarjima qilib bo'lmadi. Asl matnni yuborish uchun Yuborish'ni qayta bosing."_q },
 		{ u"lng_fenix_auto_translate_rich"_q, u"Avto-tarjima rich xabarlarda ishlamaydi. Tarjimasiz yuborish uchun Yuborish'ni qayta bosing."_q },
-		{ u"lng_fenix_save_story"_q, u"Storini saqlash"_q },
-		{ u"lng_fenix_story_download"_q, u"Istalgan storini yuklab olish"_q },
-		{ u"lng_fenix_story_download_about"_q, u"Stori ko'ruvchi menyusiga 'Storini saqlash' bandini qo'shadi, bu esa Premium yoki muallif cheklovidan qat'i nazar istalgan odamning storisini yuklab olishga imkon beradi."_q },
+		{ u"lng_fenix_save_story"_q, u"Hikoyani saqlash"_q },
+		{ u"lng_fenix_story_download"_q, u"Istalgan hikoyani yuklab olish"_q },
+		{ u"lng_fenix_story_download_about"_q, u"Hikoya ko'ruvchi menyusiga 'Hikoyani saqlash' bandini qo'shadi, bu esa Premium yoki muallif cheklovidan qat'i nazar istalgan odamning hikoyasini yuklab olishga imkon beradi."_q },
 		{ u"lng_fenix_section_data"_q, u"Ma'lumotlar"_q },
 		{ u"lng_fenix_stop_auto_download"_q, u"Avtomatik yuklab olishni to'xtatish"_q },
 		{ u"lng_fenix_stop_auto_download_about"_q, u"Suhbatni ochganingizda foto, video, audio va fayllar avtomatik yuklab olinishini to'xtatadi — trafik va xotirani tejaydi. Stikerlar baribir yuklanadi."_q },
@@ -48,8 +49,10 @@ const Table &Uzbek() {
 		{ u"lng_fenix_section_interface"_q, u"Interfeys"_q },
 		{ u"lng_fenix_hide_folder_tabs"_q, u"Papka yorliqlarini yashirish"_q },
 		{ u"lng_fenix_hide_folder_tabs_about"_q, u"Bir nechta papkangiz bo'lsa ham, suhbatlar ro'yxatidan papka/filtr yorliqlari qatorini yashiradi."_q },
-		{ u"lng_fenix_section_stories"_q, u"Storilar"_q },
-		{ u"lng_fenix_hide_stories"_q, u"Storilarni yashirish"_q },
+		{ u"lng_fenix_section_stories"_q, u"Hikoyalar"_q },
+		{ u"lng_fenix_hide_stories"_q, u"Hikoyalarni yashirish"_q },
+		{ u"lng_fenix_story_ghost"_q, u"Hikoyalarni yashirin ko'rish"_q },
+		{ u"lng_fenix_story_ghost_about"_q, u"Yoqilganda, hikoya egalari siz ularning hikoyasini ko'rganingizni bilmaydi. Sharpa rejimida bu allaqachon yoqilgan bo'ladi."_q },
 		{ u"lng_fenix_section_confirm"_q, u"Yuborishdan oldin tasdiqlash"_q },
 		{ u"lng_fenix_confirm_voice_toggle"_q, u"Ovozli xabarlarni tasdiqlash"_q },
 		{ u"lng_fenix_confirm_sticker_toggle"_q, u"Stikerlarni tasdiqlash"_q },
@@ -97,6 +100,8 @@ const Table &Uzbek() {
 		{ u"lng_fenix_auto_answer_placeholder"_q, u"Yangi suhbatlarga avtomatik yuboriladigan javob"_q },
 		{ u"lng_fenix_auto_answer_about"_q, u"Har bir shaxsiy suhbatning birinchi kiruvchi xabariga matningiz bilan bir marta javob beradi. Suhbatni ochganingizda qayta faollashadi."_q },
 		{ u"lng_fenix_join_requests"_q, u"A'zolik so'rovlari"_q },
+		{ u"lng_fenix_join_requests_count#one"_q, u"{count} kishi qo'shilishni kutmoqda."_q },
+		{ u"lng_fenix_join_requests_count#other"_q, u"{count} kishi qo'shilishni kutmoqda."_q },
 		{ u"lng_fenix_join_requests_none"_q, u"Kutilayotgan so'rovlar yo'q."_q },
 		{ u"lng_fenix_join_requests_approve"_q, u"Hammasini qabul qilish"_q },
 		{ u"lng_fenix_join_requests_decline"_q, u"Hammasini rad etish"_q },
@@ -109,6 +114,8 @@ const Table &Uzbek() {
 		{ u"lng_fenix_join_all_accounts"_q, u"Barcha akkauntlar bilan qo'shilish"_q },
 		{ u"lng_fenix_join_all_progress"_q, u"Barcha akkauntlar bilan qo'shilmoqda…"_q },
 		{ u"lng_fenix_join_all_none"_q, u"Qo'shilish uchun boshqa akkaunt yo'q."_q },
+		{ u"lng_fenix_join_all_done#one"_q, u"{count} ta akkaunt qo'shildi."_q },
+		{ u"lng_fenix_join_all_done#other"_q, u"{count} ta akkaunt qo'shildi."_q },
 		{ u"lng_fenix_features_keywords"_q, u"sharpa,yashirin,oflayn,fenix"_q },
 		{ u"lng_fenix_bot_login"_q, u"Bot tokeni bilan kirish"_q },
 		{ u"lng_fenix_bot_token"_q, u"Bot tokeni"_q },
@@ -142,6 +149,9 @@ const Table &Uzbek() {
 		{ u"lng_fenix_ocr_copied"_q, u"Matn nusxalandi"_q },
 		{ u"lng_fenix_about"_q, u"Ilova haqida"_q },
 		{ u"lng_fenix_about_tagline"_q, u"Xavfsiz messenjer"_q },
+		{ u"lng_fenix_avatar_profile"_q, u"Avatar profilni ochadi"_q },
+		{ u"lng_fenix_show_seconds"_q, u"Soniyalarni ko'rsatish"_q },
+		{ u"lng_fenix_avatar_profile_about"_q, u"Chatlar ro'yxatida avatarni bossangiz, chat emas, profil ochiladi. Ko'rilmagan hikoyalar bo'lsa, avval o'shalar ochiladi."_q },
 		{ u"lng_fenix_about_version"_q, u"Versiya"_q },
 		{ u"lng_fenix_about_version_copied"_q, u"Versiya nusxalandi"_q },
 		{ u"lng_fenix_about_channels"_q, u"Bizning kanallarimiz"_q },
@@ -198,6 +208,8 @@ const Table &Russian() {
 		{ u"lng_fenix_hide_folder_tabs_about"_q, u"Скрывает строку вкладок папок/фильтров из списка чатов, даже если у вас несколько папок."_q },
 		{ u"lng_fenix_section_stories"_q, u"Истории"_q },
 		{ u"lng_fenix_hide_stories"_q, u"Скрыть истории"_q },
+		{ u"lng_fenix_story_ghost"_q, u"Анонимный просмотр историй"_q },
+		{ u"lng_fenix_story_ghost_about"_q, u"Когда включено, авторы историй не увидят, что вы их посмотрели. В режиме призрака это уже включено."_q },
 		{ u"lng_fenix_section_confirm"_q, u"Подтверждение перед отправкой"_q },
 		{ u"lng_fenix_confirm_voice_toggle"_q, u"Подтверждать голосовые сообщения"_q },
 		{ u"lng_fenix_confirm_sticker_toggle"_q, u"Подтверждать стикеры"_q },
@@ -245,6 +257,10 @@ const Table &Russian() {
 		{ u"lng_fenix_auto_answer_placeholder"_q, u"Ответ, автоматически отправляемый в новые чаты"_q },
 		{ u"lng_fenix_auto_answer_about"_q, u"Один раз отвечает вашим текстом на первое входящее сообщение каждого личного чата. Перевзводится, когда вы открываете чат."_q },
 		{ u"lng_fenix_join_requests"_q, u"Заявки на вступление"_q },
+		{ u"lng_fenix_join_requests_count#one"_q, u"{count} человек ждёт вступления."_q },
+		{ u"lng_fenix_join_requests_count#few"_q, u"{count} человека ждут вступления."_q },
+		{ u"lng_fenix_join_requests_count#many"_q, u"{count} человек ждут вступления."_q },
+		{ u"lng_fenix_join_requests_count#other"_q, u"{count} человека ждут вступления."_q },
 		{ u"lng_fenix_join_requests_none"_q, u"Нет ожидающих заявок."_q },
 		{ u"lng_fenix_join_requests_approve"_q, u"Принять все"_q },
 		{ u"lng_fenix_join_requests_decline"_q, u"Отклонить все"_q },
@@ -257,6 +273,10 @@ const Table &Russian() {
 		{ u"lng_fenix_join_all_accounts"_q, u"Вступить со всеми аккаунтами"_q },
 		{ u"lng_fenix_join_all_progress"_q, u"Вступление со всеми аккаунтами…"_q },
 		{ u"lng_fenix_join_all_none"_q, u"Нет других аккаунтов для вступления."_q },
+		{ u"lng_fenix_join_all_done#one"_q, u"Вступил {count} аккаунт."_q },
+		{ u"lng_fenix_join_all_done#few"_q, u"Вступили {count} аккаунта."_q },
+		{ u"lng_fenix_join_all_done#many"_q, u"Вступили {count} аккаунтов."_q },
+		{ u"lng_fenix_join_all_done#other"_q, u"Вступили {count} аккаунта."_q },
 		{ u"lng_fenix_features_keywords"_q, u"призрак,скрытность,офлайн,fenix"_q },
 		{ u"lng_fenix_bot_login"_q, u"Войти по токену бота"_q },
 		{ u"lng_fenix_bot_token"_q, u"Токен бота"_q },
@@ -290,6 +310,9 @@ const Table &Russian() {
 		{ u"lng_fenix_ocr_copied"_q, u"Текст скопирован"_q },
 		{ u"lng_fenix_about"_q, u"О приложении"_q },
 		{ u"lng_fenix_about_tagline"_q, u"Безопасный мессенджер"_q },
+		{ u"lng_fenix_avatar_profile"_q, u"Аватар открывает профиль"_q },
+		{ u"lng_fenix_show_seconds"_q, u"Показывать секунды"_q },
+		{ u"lng_fenix_avatar_profile_about"_q, u"В списке чатов нажатие на аватар открывает профиль вместо чата. Непросмотренные истории по-прежнему открываются первыми."_q },
 		{ u"lng_fenix_about_version"_q, u"Версия"_q },
 		{ u"lng_fenix_about_version_copied"_q, u"Версия скопирована"_q },
 		{ u"lng_fenix_about_channels"_q, u"Наши каналы"_q },
@@ -307,29 +330,54 @@ const Table &Russian() {
 	return data;
 }
 
-[[nodiscard]] const Table *TableForCurrentLanguage() {
+// Telegram's Uzbek pack is a community beta: it lacks part of the desktop
+// strings and calls the app "Telegram Desktop". Novagram ships its own
+// translation for those keys in Resources/langs/novagram_uz.strings.
+[[nodiscard]] const Table &UzbekCloudFill() {
+	static const auto data = [] {
+		auto result = Table();
+		auto file = QFile(u":/misc/novagram_uz.strings"_q);
+		if (!file.open(QIODevice::ReadOnly)) {
+			LOG(("Fenix Lang Error: Could not open novagram_uz.strings."));
+			return result;
+		}
+		const auto parser = Lang::FileParser(file.readAll(), [&](
+				QLatin1String key,
+				const QByteArray &value) {
+			result.emplace_back(QString(key), QString::fromUtf8(value));
+		});
+		if (!parser.errors().isEmpty()) {
+			LOG(("Fenix Lang Error: %1").arg(parser.errors()));
+		}
+		return result;
+	}();
+	return data;
+}
+
+[[nodiscard]] std::vector<const Table*> TablesForCurrentLanguage() {
 	const auto id = Lang::GetInstance().id();
 	const auto code = id.split('-').front();
 	if (code == u"uz"_q) {
-		return &Uzbek();
+		return { &UzbekCloudFill(), &Uzbek() };
 	} else if (code == u"ru"_q) {
-		return &Russian();
+		return { &Russian() };
 	}
-	return nullptr;
+	return {};
 }
 
 void Apply() {
-	const auto table = TableForCurrentLanguage();
-	if (!table) {
+	const auto tables = TablesForCurrentLanguage();
+	if (tables.empty()) {
 		// Other languages keep the compiled-in English base.
 		return;
 	}
 	auto &instance = Lang::GetInstance();
 
 	auto strings = QVector<MTPLangPackString>();
-	strings.reserve(int(table->size()));
-	for (const auto &[key, value] : *table) {
-		strings.push_back(MTP_langPackString(MTP_string(key), MTP_string(value)));
+	for (const auto table : tables) {
+		for (const auto &[key, value] : *table) {
+			strings.push_back(MTP_langPackString(MTP_string(key), MTP_string(value)));
+		}
 	}
 
 	// Build an incremental difference that only touches our own keys, so the
@@ -351,17 +399,35 @@ void Apply() {
 
 void SetupLang() {
 	static auto lifetime = rpl::lifetime();
+	static auto applying = false;
 
-	Apply();
-
-	// Re-inject whenever the user switches language. idChanges fires after the
-	// instance has reset its values to the English base, so our strings layer
-	// cleanly on top. (We deliberately do NOT listen to updated() — Apply()
-	// itself fires it, which would recurse.)
-	Lang::GetInstance().idChanges(
-	) | rpl::on_next([](const QString &) {
+	const auto apply = [] {
+		if (applying) {
+			return;
+		}
+		applying = true;
 		Apply();
-	}, lifetime);
+		applying = false;
+	};
+	apply();
+
+	// Re-inject whenever the user switches language (idChanges fires after the
+	// instance has reset its values to the English base) and after every cloud
+	// update, which may overwrite keys we translate. Apply() fires updated()
+	// itself, so the flag stops it from recursing.
+	auto &instance = Lang::GetInstance();
+	rpl::merge(
+		instance.idChanges() | rpl::to_empty,
+		instance.updated()
+	) | rpl::on_next(apply, lifetime);
+}
+
+QString UzbekLanguageId() {
+	return u"uz-beta"_q;
+}
+
+bool IsUzbekLanguage(const QString &id) {
+	return (id.split('-').front() == u"uz"_q);
 }
 
 } // namespace Fenix

@@ -22,6 +22,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "core/file_utilities.h"
 #include "core/click_handler_types.h"
 #include "boxes/abstract_box.h" // Ui::hideLayer().
+#include "fenix/fenix_lang.h"
 #include "styles/style_layers.h"
 
 namespace Lang {
@@ -313,18 +314,50 @@ void CloudManager::requestLanguageList() {
 	_languagesRequestId = _api->request(MTPlangpack_GetLanguages(
 		MTP_string(CloudLangPackName())
 	)).done([=](const MTPVector<MTPLangPackLanguage> &result) {
+		_languagesRequestId = 0;
 		auto languages = Languages();
 		for (const auto &language : result.v) {
 			languages.push_back(ParseLanguage(language));
 		}
-		if (_languages != languages) {
-			_languages = languages;
-			_languageListChanged.fire({});
+		const auto hasUzbek = ranges::any_of(
+			languages,
+			Fenix::IsUzbekLanguage,
+			&Language::id);
+		if (hasUzbek) {
+			applyLanguageList(std::move(languages));
+		} else {
+			requestUzbekLanguage(std::move(languages));
 		}
-		_languagesRequestId = 0;
 	}).fail([=] {
 		_languagesRequestId = 0;
 	}).send();
+}
+
+// Novagram: Telegram leaves the beta Uzbek pack out of the official list,
+// so it is fetched on its own and listed after the official languages.
+// If the request fails, the official list is shown as it is.
+void CloudManager::requestUzbekLanguage(Languages official) {
+	_languagesRequestId = _api->request(MTPlangpack_GetLanguage(
+		MTP_string(CloudLangPackName()),
+		MTP_string(Fenix::UzbekLanguageId())
+	)).done([=](const MTPLangPackLanguage &result) {
+		_languagesRequestId = 0;
+		auto languages = official;
+		if (result.c_langPackLanguage().vstrings_count().v > 0) {
+			languages.push_back(ParseLanguage(result));
+		}
+		applyLanguageList(std::move(languages));
+	}).fail([=] {
+		_languagesRequestId = 0;
+		applyLanguageList(official);
+	}).send();
+}
+
+void CloudManager::applyLanguageList(Languages languages) {
+	if (_languages != languages) {
+		_languages = std::move(languages);
+		_languageListChanged.fire({});
+	}
 }
 
 void CloudManager::offerSwitchLangPack() {
