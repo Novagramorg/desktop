@@ -842,7 +842,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 "lng_settings_privacy_premium_link" = "Telegram Premium";
 "lng_settings_passcode_disable" = "Disable passcode";
 "lng_settings_passcode_disable_sure" = "Are you sure you want to disable passcode?";
-"lng_settings_passcode_lock_app" = "Lock Telegram with passcode";
+"lng_settings_passcode_lock_app" = "Lock Novagram with passcode";
 "lng_settings_passcode_wallet_about" = "This passcode protects the wallet keys stored on this device.";
 "lng_settings_passcode_lock_off_wallet" = "Your wallet stays protected by this passcode. Only the launch lock is off.";
 "lng_settings_use_winhello" = "Unlock with Windows Hello";
@@ -5260,7 +5260,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 
 "lng_open_this_link" = "Open this link?";
 "lng_open_link" = "Open";
-"lng_open_link_unsupported" = "Telegram can't open this link.";
+"lng_open_link_unsupported" = "Novagram can't open this link.";
 "lng_open_link_suspicious_chars" = "Highlighted characters are from a different alphabet than the rest of the address.";
 "lng_allow_bot_pass" = "Allow {bot_name} to pass your Telegram name and ID (not your phone number) to the web pages you open via this bot?";
 "lng_allow_bot" = "Allow";
@@ -9092,16 +9092,16 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 "lng_wallet_protection_removal_about" = "Choose how your funds stay protected once the passcode is removed.";
 "lng_wallet_protection_removal_wallets" = "This applies to the wallets of {accounts}.";
 "lng_wallet_protection_passcode" = "Ask for local passcode";
-"lng_wallet_protection_passcode_about" = "Confirm all spending with your Telegram passcode.";
+"lng_wallet_protection_passcode_about" = "Confirm all spending with your Novagram passcode.";
 "lng_wallet_protection_passcode_change" = "Change passcode {arrow}";
 "lng_wallet_protection_passcode_keep" = "Keep asking for this passcode";
 "lng_wallet_protection_open" = "Don't ask for passcode";
 "lng_wallet_protection_open_about" = "Anyone with access to your Telegram can spend your funds.";
 "lng_wallet_protection_open_title" = "Store without a passcode?";
-"lng_wallet_protection_open_warning_lock" = "Anyone who gains access to your unlocked Telegram Desktop on this computer will be able to steal your wallet's funds.\n\nYou can change this later from Passcode Lock in the wallet menu.";
+"lng_wallet_protection_open_warning_lock" = "Anyone who gains access to your unlocked Novagram on this computer will be able to steal your wallet's funds.\n\nYou can change this later from Passcode Lock in the wallet menu.";
 "lng_wallet_protection_open_warning_nolock" = "Anyone who gains access to this computer will be able to steal your wallet's funds.\n\nYou can change this later from Passcode Lock in the wallet menu.";
 "lng_wallet_protection_open_confirm" = "Store anyway";
-"lng_wallet_protection_create_about" = "This passcode protects your wallet key on this device. It does not lock Telegram until you turn that on in Settings.";
+"lng_wallet_protection_create_about" = "This passcode protects your wallet key on this device. It does not lock Novagram until you turn that on in Settings.";
 "lng_wallet_protection_error" = "The wallet key's protection could not be changed.";
 "lng_wallet_protection_passcode_changed_error" = "The passcode was changed, but wallet protection could not be updated. Restore your wallet keys from a backup or recovery phrase.";
 "lng_wallet_protection_touchid_about" = "Confirm all spending with your fingerprint or Mac password.";
@@ -9109,13 +9109,13 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 "lng_wallet_protection_touchid_reason" = "unlock your wallet key";
 "lng_wallet_protection_hello_about" = "Confirm all spending with your Windows PIN.";
 "lng_wallet_protection_hello_label" = "Windows Hello";
-"lng_wallet_protection_retained" = "Telegram won't ask for {provider} again for 15 minutes. {link}";
+"lng_wallet_protection_retained" = "Novagram won't ask for {provider} again for 15 minutes. {link}";
 "lng_wallet_protection_retained_ask" = "Ask next time";
 "lng_wallet_protection_hardware_failed" = "{provider} did not confirm it was you. Nothing was changed.";
-"lng_wallet_protection_hardware_unavailable" = "Your wallet key on this device is protected by {provider}, which can't be used right now. Restart Telegram to try again, or restore the wallet from Telegram's encrypted backup or with your recovery phrase to protect it another way.";
+"lng_wallet_protection_hardware_unavailable" = "Your wallet key on this device is protected by {provider}, which can't be used right now. Restart Novagram to try again, or restore the wallet from Telegram's encrypted backup or with your recovery phrase to protect it another way.";
 "lng_wallet_protection_hardware_absent" = "Your wallet key on this device was protected by {provider}, but that key can no longer be used on this device. Restore the wallet from Telegram's encrypted backup or with your recovery phrase to store the key again.";
 "lng_wallet_passcode_forgot" = "Forgot passcode?";
-"lng_wallet_passcode_forgot_about" = "Without the passcode this device cannot open its stored wallet keys. You can remove all wallet keys on this device and the passcode and keep using Telegram — you will not be logged out.";
+"lng_wallet_passcode_forgot_about" = "Without the passcode this device cannot open its stored wallet keys. You can remove all wallet keys on this device and the passcode and keep using Novagram — you will not be logged out.";
 "lng_wallet_passcode_forgot_backed" = "Your wallet can be restored from your Telegram backup.";
 "lng_wallet_passcode_forgot_confirm" = "Remove keys";
 "lng_wallet_passcode_forgot_done" = "The wallet keys and the passcode were removed from this device.";
