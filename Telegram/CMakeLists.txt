@@ -2668,6 +2668,10 @@ if (WIN32)
 
     target_link_options(Telegram PRIVATE /PDBPAGESIZE:8192)
 
+    # Novagram: static Qt 6 Network needs Dnsapi (Qt's own CMake targets list
+    # it), but the cmake helpers link Qt's system libraries by hand.
+    target_link_libraries(Telegram PRIVATE Dnsapi)
+
     if (DESKTOP_APP_WIN7_BASELINE)
         # The loader reads the subsystem version as the minimal Windows.
         target_link_options(Telegram PRIVATE /SUBSYSTEM:WINDOWS,6.01)
