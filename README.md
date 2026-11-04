@@ -1,45 +1,85 @@
-# [Telegram Desktop][telegram_desktop] – Official Messenger
+# Novagram Desktop
 
-This is the complete source code and the build instructions for the official [Telegram][telegram] messenger desktop client, based on the [Telegram API][telegram_api] and the [MTProto][telegram_proto] secure protocol.
+Novagram is an unofficial [Telegram][telegram] client for Windows made by
+[Vipads LLC][vipads] (Uzbekistan). It is built on the source code of
+[Telegram Desktop][tdesktop] and adds privacy and productivity features, a full
+Uzbek interface and its own look.
 
-[![Version](https://badge.fury.io/gh/telegramdesktop%2Ftdesktop.svg)](https://github.com/telegramdesktop/tdesktop/releases)
-[![Build Status](https://github.com/telegramdesktop/tdesktop/workflows/Windows./badge.svg)](https://github.com/telegramdesktop/tdesktop/actions)
-[![Build Status](https://github.com/telegramdesktop/tdesktop/workflows/MacOS./badge.svg)](https://github.com/telegramdesktop/tdesktop/actions)
-[![Build Status](https://github.com/telegramdesktop/tdesktop/workflows/Linux./badge.svg)](https://github.com/telegramdesktop/tdesktop/actions)
-[![Built with Depot](https://img.shields.io/badge/Built%20with-Depot.dev-46A75A)](https://depot.dev)
+*Novagram — Telegram Desktop asosidagi norasmiy mijoz: maxfiylik va qulaylik
+funksiyalari, toʻliq oʻzbekcha interfeys.*
 
-[![Preview of Telegram Desktop][preview_image]][preview_image_url]
+Novagram is not affiliated with Telegram FZ-LLC. It uses the official
+[Telegram API][telegram_api] and the [MTProto][telegram_proto] protocol.
 
-The source code is published under GPLv3 with OpenSSL exception, the license is available [here][license].
+* Website: [novagram.org][site]
+* Channels: [@Novagramtg][channel_uz] (Uzbek), [@Novagram_Ru][channel_ru] (Russian)
+* Support: [@Avazbekedu][support], [admin@novagram.org](mailto:admin@novagram.org)
 
-## Supported systems
+## Features
 
-The latest version is available for
+Everything is in **Settings > Novagram Features**.
 
-* [Windows 7 and above (64 bit)](https://telegram.org/dl/desktop/win64) ([portable](https://telegram.org/dl/desktop/win64_portable))
-* [Windows 7 and above (32 bit)](https://telegram.org/dl/desktop/win) ([portable](https://telegram.org/dl/desktop/win_portable))
-* [macOS 10.13 and above](https://telegram.org/dl/desktop/mac)
-* [Linux static build for 64 bit](https://telegram.org/dl/desktop/linux)
-* [Snap](https://snapcraft.io/telegram-desktop)
-* [Flatpak](https://flathub.org/apps/details/org.telegram.desktop)
+* **Privacy:** ghost mode (stay offline and send no read receipts or ad
+  views), view stories anonymously, preview a chat without marking it read,
+  lock a chat with a passcode.
+* **Messages:** keep deleted messages, full edit history, one-time voice and
+  video, a default text style, an auto-text signature, translation of outgoing
+  messages, auto-answer for new chats, a reminder about unread messages,
+  scanning text from images, Special forward without the original sender.
+* **Confirm before sending:** voice messages, stickers and GIFs.
+* **Stories:** download any story, hide stories.
+* **Interface:** hide folder tabs, seconds in message times, open the profile
+  from a chat list avatar.
+* **Channels and groups:** approve or decline all join requests, accept them
+  automatically, join with all accounts at once.
+* **Tools:** find a chat by username, Chat ID and first message, a curated bot
+  list, log in with a bot token, stop automatic downloads.
 
-## Old system versions
+## Languages
 
-Version **4.9.9** was the last that supports older systems
+The whole interface is translated into Uzbek. Telegram's community Uzbek pack
+covers most strings; [`novagram_uz.strings`][uz_strings] fills the rest and
+fixes the app name. The Novagram features are also translated into Russian.
 
-* [macOS 10.12](https://updates.tdesktop.com/tmac/tsetup.4.9.9.dmg)
-* [Linux with glibc < 2.28 static build](https://updates.tdesktop.com/tlinux/tsetup.4.9.9.tar.xz)
+After every upstream update run
 
-Version **2.4.4** was the last that supports older systems
+    python Telegram/Resources/langs/novagram_uz_check.py
 
-* [OS X 10.10 and 10.11](https://updates.tdesktop.com/tosx/tsetup-osx.2.4.4.dmg)
-* [Linux static build for 32 bit](https://updates.tdesktop.com/tlinux32/tsetup32.2.4.4.tar.xz)
+to list new strings that still need an Uzbek translation.
 
-Version **1.8.15** was the last that supports older systems
+## Building on Windows
 
-* [Windows XP and Vista](https://updates.tdesktop.com/tsetup/tsetup.1.8.15.exe) ([portable](https://updates.tdesktop.com/tsetup/tportable.1.8.15.zip))
-* [OS X 10.8 and 10.9](https://updates.tdesktop.com/tmac/tsetup.1.8.15.dmg)
-* [OS X 10.6 and 10.7](https://updates.tdesktop.com/tmac32/tsetup32.1.8.15.dmg)
+1. Prepare the toolchain and the libraries as described in the
+   [Telegram Desktop Windows guide][win]. Upstream builds Windows with Qt 6.
+2. Get your own `api_id` and `api_hash` at
+   [my.telegram.org](https://my.telegram.org) and put them in
+   `Telegram/cmake/telegram_options.local.cmake`, which git ignores:
+
+       set(TDESKTOP_API_ID 12345)
+       set(TDESKTOP_API_HASH 0123456789abcdef0123456789abcdef)
+
+       set(DESKTOP_APP_DISABLE_AUTOUPDATE ON)
+       set(DESKTOP_APP_DISABLE_CRASH_REPORTS ON)
+
+   Never commit these values.
+3. Configure and build as in the guide. The result is `Novagram.exe`.
+
+The Novagram blue palette lives in the `lib_ui` submodule, so it is kept in
+[`Telegram/cmake/novagram_palette.diff`][palette] and applied automatically
+when CMake configures the project.
+
+## Updating from Telegram Desktop
+
+The `novagram` branch follows stable Telegram Desktop releases. Merge the new
+release tag from [telegramdesktop/tdesktop][tdesktop_repo], keep the Novagram
+changes when resolving conflicts, update the submodules, then run the Uzbek
+check above. If configuring stops because the palette no longer applies,
+regenerate `novagram_palette.diff` for the new `lib_ui`.
+
+## License
+
+Like Telegram Desktop, the source code is published under GPLv3 with OpenSSL
+exception. See [LICENSE][license] and [LEGAL](LEGAL).
 
 ## Third-party
 
@@ -69,33 +109,18 @@ Version **1.8.15** was the last that supports older systems
 * zxcvbn-c ([MIT License](https://github.com/tsyrogit/zxcvbn-c/blob/master/LICENSE.txt))
 * FrequencyWords by Hermit Dave ([Creative Commons Attribution-ShareAlike 4.0](https://creativecommons.org/licenses/by-sa/4.0/))
 
-## Build instructions
-
-* [Windows (32-bit and 64-bit)][win]
-* [macOS][mac]
-* [GNU/Linux using Docker][linux]
-
 [//]: # (LINKS)
 [telegram]: https://telegram.org
-[telegram_desktop]: https://desktop.telegram.org
 [telegram_api]: https://core.telegram.org
 [telegram_proto]: https://core.telegram.org/mtproto
-[license]: LICENSE
+[tdesktop]: https://desktop.telegram.org
+[tdesktop_repo]: https://github.com/telegramdesktop/tdesktop
+[vipads]: https://vipads.uz
+[site]: https://novagram.org
+[channel_uz]: https://t.me/Novagramtg
+[channel_ru]: https://t.me/Novagram_Ru
+[support]: https://t.me/Avazbekedu
+[uz_strings]: Telegram/Resources/langs/novagram_uz.strings
+[palette]: Telegram/cmake/novagram_palette.diff
 [win]: docs/building-win.md
-[mac]: docs/building-mac.md
-[linux]: docs/building-linux.md
-[preview_image]: https://github.com/telegramdesktop/tdesktop/blob/dev/docs/assets/preview.png "Preview of Telegram Desktop"
-[preview_image_url]: https://raw.githubusercontent.com/telegramdesktop/tdesktop/dev/docs/assets/preview.png
-
-## Thanks to
-
-<a href="https://depot.dev">
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="https://depot.dev/assets/brand/1693758816/depot-logo-horizontal-on-dark.svg">
-    <source media="(prefers-color-scheme: light)" srcset="https://depot.dev/assets/brand/1693758816/depot-logo-horizontal-on-light.svg">
-    <img alt="Depot" src="https://depot.dev/assets/brand/1693758816/depot-logo-horizontal-on-light.svg" width="150">
-  </picture>
-</a>
-
-CI infrastructure sponsored by [Depot](https://depot.dev) — fast GitHub Actions runners.
-
+[license]: LICENSE
