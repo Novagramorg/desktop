@@ -142,6 +142,18 @@ namespace {
 constexpr auto kCustomThemesInMemory = 5;
 constexpr auto kMaxChatEntryHistorySize = 50;
 
+// Novagram: a locked chat (or a topic of a locked forum) shows nothing in
+// the chats list preview either, until its passcode is given.
+[[nodiscard]] bool FenixLockedPreview(const Dialogs::RowDescriptor &row) {
+	const auto history = row.key.owningHistory();
+	if (!history) {
+		return false;
+	}
+	const auto peerId = history->peer->id;
+	const auto &lock = Fenix::GetChatLock();
+	return lock.isLocked(peerId) && !lock.isUnlocked(peerId);
+}
+
 base::options::toggle OptionExternalMediaViewer({
 	.id = kOptionExternalMediaViewer,
 	.name = "External media viewer",
@@ -4162,6 +4174,9 @@ bool SessionController::showChatPreview(
 		Fn<void(bool shown)> callback,
 		QPointer<QWidget> parentOverride,
 		std::optional<QPoint> positionOverride) {
+	if (FenixLockedPreview(row)) {
+		return false;
+	}
 	return _chatPreviewManager->show(
 		std::move(row),
 		std::move(callback),
@@ -4174,6 +4189,9 @@ bool SessionController::scheduleChatPreview(
 		Fn<void(bool shown)> callback,
 	QPointer<QWidget> parentOverride,
 	std::optional<QPoint> positionOverride) {
+	if (FenixLockedPreview(row)) {
+		return false;
+	}
 	return _chatPreviewManager->schedule(
 		std::move(row),
 		std::move(callback),
