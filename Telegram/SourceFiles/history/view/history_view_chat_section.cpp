@@ -7,6 +7,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "history/view/history_view_chat_section.h"
 
+#include "fenix/confirm_send.h"
 #include "history/admin_log/history_admin_log_section.h"
 #include "history/view/controls/history_view_top_controls.h"
 #include "history/view/controls/history_view_bottom_controls.h"
@@ -2375,6 +2376,13 @@ void ChatWidget::send() {
 }
 
 void ChatWidget::sendVoice(const ComposeControls::VoiceToSend &data) {
+	// Novagram: ask before sending, when turned on.
+	if (!data.options.starsApproved
+		&& Fenix::AskBeforeSendingVoice(
+			controller()->uiShow(),
+			crl::guard(this, [=] { sendVoice(data); }))) {
+		return;
+	}
 	const auto withPaymentApproved = [=](int approved) {
 		auto copy = data;
 		copy.options.starsApproved = approved;
@@ -3180,6 +3188,16 @@ bool ChatWidget::sendExistingDocument(
 		|| ShowSendPremiumError(controller(), document)) {
 		return false;
 	}
+	// Novagram: ask before sending, when turned on.
+	if (!messageToSend.action.options.starsApproved
+		&& Fenix::AskBeforeSendingDocument(
+			controller()->uiShow(),
+			document,
+			crl::guard(this, [=] {
+				sendExistingDocument(document, messageToSend, localId);
+			}))) {
+		return false;
+	}
 	if (!ephemeralReply) {
 		const auto withPaymentApproved = [=](int approved) {
 			auto copy = messageToSend;
@@ -3280,6 +3298,16 @@ void ChatWidget::sendInlineResult(
 			controller()->uiShow(),
 			&session(),
 			replyTo().messageId)) {
+		return;
+	}
+	// Novagram: ask before sending, when turned on.
+	if (!options.starsApproved
+		&& Fenix::AskBeforeSendingInline(
+			controller()->uiShow(),
+			result.get(),
+			crl::guard(this, [=] {
+				sendInlineResult(result, bot, options, localMessageId);
+			}))) {
 		return;
 	}
 	auto action = prepareSendAction(options);

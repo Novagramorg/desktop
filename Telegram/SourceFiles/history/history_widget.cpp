@@ -14,6 +14,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "fenix/auto_translate.h"
 #include "fenix/fenix_settings.h"
 #include "fenix/auto_text.h"
+#include "fenix/confirm_send.h"
 #include "fenix/one_time_voice.h"
 #include "api/api_chat_participants.h"
 #include "api/api_global_privacy.h"
@@ -5820,13 +5821,10 @@ void HistoryWidget::sendVoice(const VoiceToSend &data) {
 	if (!canWriteMessage() || data.bytes.isEmpty() || !_history) {
 		return;
 	}
-	if (Fenix::Get().confirmVoice() && !base::take(_fenixVoiceConfirmed)) {
-		fenixConfirmSend(
-			tr::lng_fenix_confirm_voice(tr::now),
-			crl::guard(this, [=] {
-				_fenixVoiceConfirmed = true;
-				sendVoice(data);
-			}));
+	if (!data.options.starsApproved
+		&& Fenix::AskBeforeSendingVoice(
+			controller()->uiShow(),
+			crl::guard(this, [=] { sendVoice(data); }))) {
 		return;
 	}
 
@@ -6042,20 +6040,6 @@ void HistoryWidget::fenixTranslateFailed() {
 	// Don't silently send the wrong text — the next Send tap sends as-is.
 	_fenixSendOriginalOnce = true;
 	controller()->showToast(tr::lng_fenix_auto_translate_failed(tr::now));
-}
-
-bool HistoryWidget::fenixConfirmSend(const QString &text, Fn<void()> resend) {
-	// Show a "are you sure?" box before sending; on confirm, the caller re-runs
-	// its send with the relevant one-shot bypass flag already set.
-	controller()->show(Ui::MakeConfirmBox({
-		.text = text,
-		.confirmed = crl::guard(this, [=](Fn<void()> close) {
-			close();
-			resend();
-		}),
-		.confirmText = tr::lng_send_button(),
-	}));
-	return true;
 }
 
 TextWithTags HistoryWidget::fenixApplyDefaultStyle(
@@ -9783,15 +9767,11 @@ void HistoryWidget::sendInlineResult(InlineBots::ResultSelected result) {
 			replyTo().messageId)) {
 		return;
 	}
-	if (Fenix::Get().confirmGif()
-		&& result.result->isGif()
-		&& !base::take(_fenixDocConfirmed)) {
-		fenixConfirmSend(
-			tr::lng_fenix_confirm_gif(tr::now),
-			crl::guard(this, [=] {
-				_fenixDocConfirmed = true;
-				sendInlineResult(result);
-			}));
+	if (!result.options.starsApproved
+		&& Fenix::AskBeforeSendingInline(
+			controller()->uiShow(),
+			result.result.get(),
+			crl::guard(this, [=] { sendInlineResult(result); }))) {
 		return;
 	}
 
@@ -10458,19 +10438,13 @@ bool HistoryWidget::sendExistingDocument(
 		|| ShowSendPremiumError(controller(), document)) {
 		return false;
 	}
-	const auto isSticker = (document->sticker() != nullptr);
-	const auto isGif = document->isGifv();
-	if (((isSticker && Fenix::Get().confirmSticker())
-			|| (isGif && Fenix::Get().confirmGif()))
-		&& !base::take(_fenixDocConfirmed)) {
-		fenixConfirmSend(
-			isSticker
-				? tr::lng_fenix_confirm_sticker(tr::now)
-				: tr::lng_fenix_confirm_gif(tr::now),
+	if (!messageToSend.action.options.starsApproved
+		&& Fenix::AskBeforeSendingDocument(
+			controller()->uiShow(),
+			document,
 			crl::guard(this, [=] {
-				_fenixDocConfirmed = true;
 				sendExistingDocument(document, messageToSend, localId);
-			}));
+			}))) {
 		return false;
 	}
 	if (!ephemeralReply) {

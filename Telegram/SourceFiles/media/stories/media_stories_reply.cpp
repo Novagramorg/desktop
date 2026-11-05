@@ -33,6 +33,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "data/data_peer_values.h"
 #include "data/data_session.h"
 #include "data/data_user.h"
+#include "fenix/confirm_send.h"
 #include "history/view/controls/compose_controls_common.h"
 #include "history/view/controls/history_view_compose_controls.h"
 #include "history/view/history_view_schedule_box.h" // ScheduleBoxStyleArgs
@@ -341,6 +342,13 @@ bool ReplyArea::checkSendPayment(
 }
 
 void ReplyArea::sendVoice(const VoiceToSend &data) {
+	// Novagram: ask before sending, when turned on.
+	if (!data.options.starsApproved
+		&& Fenix::AskBeforeSendingVoice(
+			_controller->uiShow(),
+			crl::guard(this, [=] { sendVoice(data); }))) {
+		return;
+	}
 	auto action = prepareSendAction(data.options);
 
 	const auto withPaymentApproved = [=](int approved) {
@@ -382,6 +390,15 @@ bool ReplyArea::sendExistingDocument(
 		return false;
 	} else if (showSlowmodeError()
 		|| Window::ShowSendPremiumError(show, document)) {
+		return false;
+	} else if (!messageToSend.action.options.starsApproved
+		&& Fenix::AskBeforeSendingDocument(
+			show,
+			document,
+			crl::guard(this, [=] {
+				sendExistingDocument(document, messageToSend, localId);
+			}))) {
+		// Novagram: ask before sending, when turned on.
 		return false;
 	}
 	const auto withPaymentApproved = [=](int approved) {
@@ -462,6 +479,16 @@ void ReplyArea::sendInlineResult(
 		not_null<UserData*> bot,
 		Api::SendOptions options,
 		std::optional<MsgId> localMessageId) {
+	// Novagram: ask before sending, when turned on.
+	if (!options.starsApproved
+		&& Fenix::AskBeforeSendingInline(
+			_controller->uiShow(),
+			result.get(),
+			crl::guard(this, [=] {
+				sendInlineResult(result, bot, options, localMessageId);
+			}))) {
+		return;
+	}
 	auto action = prepareSendAction(options);
 	action.generateLocal = true;
 

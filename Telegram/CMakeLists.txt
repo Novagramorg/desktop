@@ -988,6 +988,8 @@ PRIVATE
     fenix/auto_translate.h
     fenix/chat_preview_state.cpp
     fenix/chat_preview_state.h
+    fenix/confirm_send.cpp
+    fenix/confirm_send.h
     fenix/deleted_msg.cpp
     fenix/deleted_msg.h
     fenix/edit_history.cpp

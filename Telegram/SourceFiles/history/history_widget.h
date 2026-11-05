@@ -495,9 +495,6 @@ private:
 		QString lang,
 		Api::SendOptions options);
 	void fenixTranslateFailed();
-	bool fenixConfirmSend(
-		const QString &text,
-		Fn<void()> resend);
 	[[nodiscard]] TextWithTags fenixApplyDefaultStyle(
 		TextWithTags textWithTags) const;
 	[[nodiscard]] TextWithTags fenixAppendAutoText(
@@ -1063,8 +1060,6 @@ private:
 	bool _fenixSendOriginalOnce = false;
 	PeerId _fenixRichTranslateWarnedPeer = PeerId(0);
 	std::unique_ptr<QNetworkAccessManager> _fenixTranslateNetwork;
-	bool _fenixVoiceConfirmed = false;
-	bool _fenixDocConfirmed = false;
 
 	object_ptr<Ui::PlainShadow> _topShadow;
 	bool _inGrab = false;
