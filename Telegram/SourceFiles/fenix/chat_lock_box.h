@@ -25,6 +25,13 @@ void ChatLockUnlockBox(
 	PeerId peerId,
 	Fn<void()> onUnlocked);
 
+// The same check before the lock is removed or the chat's own password is
+// changed from a menu, where the chat may not have been opened.
+void ChatLockVerifyBox(
+	not_null<Ui::GenericBox*> box,
+	PeerId peerId,
+	Fn<void()> onVerified);
+
 // Pick how to lock a chat: [onChoose](true) for a separate per-chat passcode,
 // [onChoose](false) for the shared common passcode.
 void ChatLockChoiceBox(

@@ -42,11 +42,10 @@ namespace {
 	return field;
 }
 
-} // namespace
-
-void ChatLockUnlockBox(
+void FillPasscodeBox(
 		not_null<Ui::GenericBox*> box,
 		PeerId peerId,
+		rpl::producer<QString> submitText,
 		Fn<void()> onUnlocked) {
 	box->setTitle(tr::lng_fenix_chat_lock_title());
 
@@ -76,8 +75,32 @@ void ChatLockUnlockBox(
 		field,
 		submit);
 
-	box->addButton(tr::lng_fenix_chat_lock_open(), submit);
+	box->addButton(std::move(submitText), submit);
 	box->addButton(tr::lng_cancel(), [=] { box->closeBox(); });
+}
+
+} // namespace
+
+void ChatLockUnlockBox(
+		not_null<Ui::GenericBox*> box,
+		PeerId peerId,
+		Fn<void()> onUnlocked) {
+	FillPasscodeBox(
+		box,
+		peerId,
+		tr::lng_fenix_chat_lock_open(),
+		std::move(onUnlocked));
+}
+
+void ChatLockVerifyBox(
+		not_null<Ui::GenericBox*> box,
+		PeerId peerId,
+		Fn<void()> onVerified) {
+	FillPasscodeBox(
+		box,
+		peerId,
+		tr::lng_fenix_chat_lock_continue(),
+		std::move(onVerified));
 }
 
 void ChatLockChoiceBox(

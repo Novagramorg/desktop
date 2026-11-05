@@ -9436,6 +9436,8 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 "lng_fenix_chat_lock_section" = "Chat lock";
 "lng_fenix_chat_lock_change_common" = "Change common password";
 "lng_fenix_chat_lock_changed" = "Common password changed";
+"lng_fenix_chat_lock_change_own" = "Change chat password";
+"lng_fenix_chat_lock_own_changed" = "Chat password changed";
 "lng_fenix_ocr_scan" = "Scan text";
 "lng_fenix_ocr_title" = "Scan text";
 "lng_fenix_ocr_recognizing" = "Recognizing…";

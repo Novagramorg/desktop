@@ -1321,12 +1321,29 @@ void Filler::addFenixChatLock() {
 	const auto peerId = _peer->id;
 	const auto controller = _controller;
 	const auto locked = Fenix::GetChatLock().isLocked(peerId);
+
+	// Removing the lock or changing the chat's own password needs the
+	// chat's passcode, unless it was given to open the chat just now: this
+	// menu is in the chats list too, where the chat isn't opened.
+	const auto withPasscode = [=](Fn<void()> done) {
+		if (Fenix::GetChatLock().isUnlocked(peerId)) {
+			done();
+			return;
+		}
+		controller->show(Box(Fenix::ChatLockVerifyBox, peerId, [=] {
+			// After the passcode box is gone, not from inside its submit.
+			crl::on_main(controller, done);
+		}));
+	};
+
 	_addAction(locked
 		? tr::lng_fenix_chat_unlock(tr::now)
 		: tr::lng_fenix_chat_lock(tr::now), [=] {
 		if (Fenix::GetChatLock().isLocked(peerId)) {
-			Fenix::GetChatLock().unlock(peerId);
-			controller->showToast(tr::lng_fenix_chat_unlocked(tr::now));
+			withPasscode([=] {
+				Fenix::GetChatLock().unlock(peerId);
+				controller->showToast(tr::lng_fenix_chat_unlocked(tr::now));
+			});
 			return;
 		}
 		controller->show(Box(Fenix::ChatLockChoiceBox, [=](bool individual) {
@@ -1347,6 +1364,23 @@ void Filler::addFenixChatLock() {
 				}));
 		}));
 	}, &st::menuIconLock);
+
+	// A chat on its own password can have it changed here; the common one
+	// is changed in Settings > Novagram > Chat lock.
+	if (locked && Fenix::GetChatLock().isIndividual(peerId)) {
+		_addAction(tr::lng_fenix_chat_lock_change_own(tr::now), [=] {
+			withPasscode([=] {
+				controller->show(Box(
+					Fenix::ChatLockCreateBox,
+					peerId,
+					true,
+					[=] {
+						controller->showToast(
+							tr::lng_fenix_chat_lock_own_changed(tr::now));
+					}));
+			});
+		}, &st::menuIconPermissions);
+	}
 }
 
 void Filler::addReport() {
