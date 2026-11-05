@@ -58,6 +58,10 @@ constexpr auto kPlaneAxisAngle = 35.;
 constexpr auto kPlaneAxisX = 0.452;
 constexpr auto kPlaneAxisY = 0.394;
 constexpr auto kPlaneTurn = 8.6;
+
+// Novagram: the middle of the code shows Novagram's logo, which only fades
+// and grows in, without the plane's roll, slide and speed streaks.
+constexpr auto kNovagramStillLogo = true;
 constexpr auto kFlyInOffset = 0.55;
 constexpr auto kFlyInScale = 0.5;
 constexpr auto kStreakAlpha = 0.18;
@@ -442,8 +446,14 @@ struct BackgroundRequest {
 	{
 		auto p = QPainter(&result);
 		auto hq = PainterHighQualityEnabler(p);
-		auto svg = QSvgRenderer(u":/gui/plane_white.svg"_q);
-		svg.render(&p, QRectF(QPointF(), QSizeF(result.size())));
+		if (kNovagramStillLogo) {
+			p.drawImage(
+				QRect(QPoint(), result.size()),
+				QImage(u":/gui/novagram_qr_logo.png"_q));
+		} else {
+			auto svg = QSvgRenderer(u":/gui/plane_white.svg"_q);
+			svg.render(&p, QRectF(QPointF(), QSizeF(result.size())));
+		}
 	}
 	result.setDevicePixelRatio(ratio);
 	return result;
@@ -712,15 +722,17 @@ void PaintPlane(
 	circle.addEllipse(logo);
 	p.save();
 	p.setClipPath(circle);
-	if (state.streaks > 0.) {
+	if (!kNovagramStillLogo && state.streaks > 0.) {
 		PaintStreaks(p, logo, state);
 	}
-	p.translate(center + state.shift);
+	p.translate(center + (kNovagramStillLogo ? QPointF() : state.shift));
 	p.scale(state.scale, state.scale);
 	p.translate(anchor - center);
-	p.rotate(state.rotation - kPlaneAxisAngle);
-	p.scale(1., state.width);
-	p.rotate(kPlaneAxisAngle);
+	if (!kNovagramStillLogo) {
+		p.rotate(state.rotation - kPlaneAxisAngle);
+		p.scale(1., state.width);
+		p.rotate(kPlaneAxisAngle);
+	}
 	p.translate(-anchor);
 	p.setOpacity(state.opacity);
 	p.drawImage(logo, plane);
