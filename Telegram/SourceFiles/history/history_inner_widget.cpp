@@ -3066,7 +3066,9 @@ void HistoryInner::showContextMenu(QContextMenuEvent *e, bool showFromTouch) {
 			}, &st::menuIconEdit);
 		}
 		// Novagram: show saved edit history if we recorded any versions.
-		if (Fenix::GetEdits().has(item->history()->peer->id, item->id)) {
+		if (Fenix::GetEdits(&item->history()->session()).has(
+				item->history()->peer->id,
+				item->id)) {
 			const auto peer = item->history()->peer;
 			const auto msgId = item->id;
 			_menu->addAction(tr::lng_fenix_edit_history(tr::now), crl::guard(

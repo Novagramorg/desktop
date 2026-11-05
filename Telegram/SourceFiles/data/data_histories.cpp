@@ -9,7 +9,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 
 #include "fenix/fenix_settings.h"
 #include "fenix/auto_answer.h"
-#include "fenix/deleted_msg.h"
+#include "fenix/saved_history.h"
 #include "api/api_text_entities.h"
 #include "data/business/data_shortcut_messages.h"
 #include "data/components/ephemeral_messages.h"
@@ -855,11 +855,9 @@ void Histories::deleteMessages(
 		not_null<History*> history,
 		const QVector<MTPint> &ids,
 		bool revoke) {
-	// Novagram: mark this batch so SaveDeletedMsg lets it through.
-	Fenix::GetDeleted().markNextAsMine();
-	for (const auto &id : ids) {
-		Fenix::GetDeleted().forget(history->peer->id, id.v);
-	}
+	// Novagram: the user deletes these, so Save Deleted Messages doesn't
+	// keep them and their saved copies and edit history are forgotten.
+	Fenix::RememberOwnDeletion(history, ids);
 	sendRequest(history, RequestType::Delete, [=](Fn<void()> finish) {
 		const auto done = [=](const MTPmessages_AffectedMessages &result) {
 			session().api().applyAffectedMessages(history->peer, result);

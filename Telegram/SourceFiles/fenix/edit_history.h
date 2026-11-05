@@ -3,11 +3,12 @@ This file is part of Novagram Desktop, a fork of Telegram Desktop by Vipads LLC.
 
 Keeps the previous text of edited messages so the user can review the edit
 history of a message. Equivalent of Android org.fenixuz.utils.EditMessage.
-Storage: JSON file at cWorkingDir()/tdata/fenix_edits.json
+One store per account, see fenix/saved_history.h.
 */
 #pragma once
 
-#include <rpl/event_stream.h>
+#include "base/timer.h"
+#include "fenix/saved_history.h"
 
 #include <QtCore/QString>
 
@@ -18,12 +19,13 @@ namespace Fenix {
 
 class EditHistory final {
 public:
-	[[nodiscard]] static EditHistory &Instance();
-
 	struct Version {
 		QString text;
 		TimeId date = 0;
 	};
+
+	explicit EditHistory(not_null<Main::Session*> session);
+	~EditHistory();
 
 	// Records the text a message held before it was edited. The newest
 	// version is appended last. Consecutive duplicates are ignored.
@@ -33,34 +35,29 @@ public:
 		MsgId msgId) const;
 	[[nodiscard]] bool has(PeerId peerId, MsgId msgId) const;
 	void forget(PeerId peerId, MsgId msgId);
-	void forgetAll(PeerId peerId);
+	void clear();
 
-	[[nodiscard]] rpl::producer<> changes() const;
+	// Versions of the old file shared by all accounts.
+	void importLegacy(
+		std::vector<std::pair<FullMsgId, std::vector<Version>>> list);
+
+	// The account logs out: nothing is kept or written any more.
+	void wipe();
 
 private:
-	EditHistory();
-	~EditHistory() = default;
-
 	void load();
 	void save();
-	void scheduleSave();
+	void saveDelayed();
+	void trim();
 
-	struct Key {
-		PeerId peer;
-		MsgId msg;
-		friend constexpr bool operator<(
-				const Key &a, const Key &b) noexcept {
-			return std::tie(a.peer, a.msg) < std::tie(b.peer, b.msg);
-		}
-		friend constexpr bool operator==(
-				const Key &a, const Key &b) noexcept = default;
-	};
-	std::map<Key, std::vector<Version>> _records;
-	rpl::event_stream<> _changes;
+	const SessionFile _file;
+	std::map<FullMsgId, std::vector<Version>> _records;
+	int64 _textSize = 0;
+	base::Timer _saveTimer;
+	bool _wiped = false;
+
 };
 
-[[nodiscard]] inline EditHistory &GetEdits() {
-	return EditHistory::Instance();
-}
+[[nodiscard]] EditHistory &GetEdits(not_null<Main::Session*> session);
 
 } // namespace Fenix

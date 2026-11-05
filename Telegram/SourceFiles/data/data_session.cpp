@@ -9,6 +9,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 
 #include "fenix/fenix_settings.h"
 #include "fenix/deleted_msg.h"
+#include "fenix/saved_history.h"
 #include "main/main_session.h"
 #include "main/main_session_settings.h"
 #include "main/main_app_config.h"
@@ -3361,9 +3362,8 @@ void Session::processMessagesDeleted(
 
 	// Novagram: when Save Deleted Messages is enabled, intercept deletions
 	// coming from the server and keep the items visible (Android DeletedMsg
-	// pattern). Own deletions (marked via markNextAsMine) still proceed.
+	// pattern). The user's own deletions still proceed, see KeepDeleted.
 	const auto saveDeleted = Fenix::Get().saveDeletedMsg();
-	const auto wasMine = saveDeleted && Fenix::GetDeleted().takeNextAsMine();
 
 	auto toDestroy = std::vector<not_null<HistoryItem*>>();
 	auto historiesToCheck = base::flat_set<not_null<History*>>();
@@ -3371,11 +3371,11 @@ void Session::processMessagesDeleted(
 		const auto i = list ? list->find(messageId.v) : Messages::iterator();
 		if (list && i != list->end()) {
 			const auto history = i->second->history();
-			if (saveDeleted && !wasMine) {
+			if (saveDeleted && Fenix::KeepDeleted(i->second)) {
 				const auto by = peerIsChannel(peerId)
 					? Fenix::DeletedBy::Channel
 					: Fenix::DeletedBy::Other;
-				Fenix::GetDeleted().recordDeletion(
+				Fenix::GetDeleted(_session).recordDeletion(
 					peerId,
 					i->second->id,
 					by);
@@ -3404,15 +3404,14 @@ void Session::processMessagesDeleted(
 
 void Session::processNonChannelMessagesDeleted(const QVector<MTPint> &data) {
 	const auto saveDeleted = Fenix::Get().saveDeletedMsg();
-	const auto wasMine = saveDeleted && Fenix::GetDeleted().takeNextAsMine();
 
 	auto toDestroy = std::vector<not_null<HistoryItem*>>();
 	auto historiesToCheck = base::flat_set<not_null<History*>>();
 	for (const auto &messageId : data) {
 		if (const auto item = nonChannelMessage(messageId.v)) {
 			const auto history = item->history();
-			if (saveDeleted && !wasMine) {
-				Fenix::GetDeleted().recordDeletion(
+			if (saveDeleted && Fenix::KeepDeleted(item)) {
+				Fenix::GetDeleted(_session).recordDeletion(
 					history->peer->id,
 					item->id,
 					Fenix::DeletedBy::Other);
@@ -6161,6 +6160,9 @@ void Session::clearLocalStorage() {
 	_cache->clear();
 	_bigFileCache->close();
 	_bigFileCache->clear();
+
+	// Novagram: the account logs out, its saved history goes too.
+	Fenix::WipeSavedHistory(_session);
 }
 
 void Session::fillMessagePeer(FullMsgId fullId, PeerId peerId) {

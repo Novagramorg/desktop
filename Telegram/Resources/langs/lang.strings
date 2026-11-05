@@ -9324,6 +9324,9 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 "lng_fenix_edit_history" = "Edit History";
 "lng_fenix_edit_history_empty" = "No previous versions saved for this message.";
 "lng_fenix_edit_history_current" = "Current version";
+"lng_fenix_saved_history_clear" = "Clear saved history";
+"lng_fenix_saved_history_clear_sure" = "Forget the deleted messages and edit history this device saved for this account?\n\nThis action cannot be undone.";
+"lng_fenix_saved_history_cleared" = "Saved history cleared.";
 "lng_fenix_auto_translate" = "Auto-translate";
 "lng_fenix_auto_translate_on" = "Auto-translate: {lang}";
 "lng_fenix_auto_translate_off" = "Turn off auto-translate";

@@ -237,7 +237,7 @@ Widget::Widget(
 
 	_inner = _scroll->setOwnedWidget(object_ptr<HistoryInner>(
 		this,
-		GetEdits().versions(peer->id, msgId)));
+		GetEdits(&peer->session()).versions(peer->id, msgId)));
 	_inner->show();
 	_scroll->show();
 }

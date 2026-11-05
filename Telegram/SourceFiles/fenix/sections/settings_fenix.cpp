@@ -7,12 +7,14 @@ This file is part of Novagram Desktop, a fork of Telegram Desktop by Vipads LLC.
 #include "fenix/fenix_deep_links.h"
 #include "fenix/chat_lock.h"
 #include "fenix/chat_lock_box.h"
+#include "fenix/saved_history.h"
 #include "main/main_session.h"
 #include "main/main_session_settings.h"
 #include "data/data_auto_download.h"
 #include "data/data_session.h"
 #include "data/data_peer.h"
 #include "lang/lang_keys.h"
+#include "ui/boxes/confirm_box.h"
 #include "ui/layers/generic_box.h"
 #include "ui/widgets/fields/input_field.h"
 #include "ui/widgets/fields/password_input.h"
@@ -103,6 +105,9 @@ Ui::SettingsButton *AddAction(
 }
 
 void BuildMessagesRows(SectionBuilder &builder) {
+	const auto controller = builder.controller();
+	const auto session = builder.session();
+
 	builder.addSkip();
 	builder.addSubsectionTitle(tr::lng_fenix_section_messages());
 
@@ -125,6 +130,29 @@ void BuildMessagesRows(SectionBuilder &builder) {
 		[] { return Fenix::Get().saveEditHistory(); },
 		[](bool value) { Fenix::Get().setSaveEditHistory(value); },
 		Fenix::Get().saveEditHistoryValue());
+
+	AddAction(
+		builder,
+		u"clear_saved_history"_q,
+		tr::lng_fenix_saved_history_clear(),
+		&st::menuIconClear,
+		{ u"clear"_q, u"deleted"_q, u"edit"_q, u"history"_q },
+		[=] {
+			if (!controller) {
+				return;
+			}
+			controller->show(Ui::MakeConfirmBox({
+				.text = tr::lng_fenix_saved_history_clear_sure(),
+				.confirmed = [=](Fn<void()> close) {
+					Fenix::ClearSavedHistory(session);
+					controller->showToast(
+						tr::lng_fenix_saved_history_cleared(tr::now));
+					close();
+				},
+				.confirmText = tr::lng_local_storage_clear_some(),
+				.confirmStyle = &st::attentionBoxButton,
+			}));
+		});
 
 	builder.addSkip();
 	builder.addDivider();

@@ -2437,12 +2437,13 @@ void HistoryItem::applyEdition(HistoryMessageEdition &&edition) {
 	// user can review its full edit history. (Matches Android pro EditMessage.)
 	if (Fenix::Get().saveEditHistory()
 		&& edition.editDate != -1
+		&& IsServerMsgId(id)
 		&& !isLocalUpdateMedia()) {
 		const auto &previous = originalText();
 		if (!previous.text.isEmpty()
 			&& previous.text != edition.textWithEntities.text) {
 			const auto edited = Get<HistoryMessageEdited>();
-			Fenix::GetEdits().recordEdit(
+			Fenix::GetEdits(&_history->session()).recordEdit(
 				_history->peer->id,
 				id,
 				previous.text,

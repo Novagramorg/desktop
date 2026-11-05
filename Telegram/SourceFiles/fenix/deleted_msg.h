@@ -2,12 +2,15 @@
 This file is part of Novagram Desktop, a fork of Telegram Desktop by Vipads LLC.
 
 Tracks messages deleted by others so the local view can keep them visible
-with a "deleted by" annotation. Equivalent of Android org.pro.utils.DeletedMsg.
-Storage: JSON file at cWorkingDir()/tdata/fenix_deleted.json
+with a "deleted by" annotation. Equivalent of Android org.fenixuz.utils
+DeletedMsg. One store per account, see fenix/saved_history.h.
 */
 #pragma once
 
-#include <rpl/event_stream.h>
+#include "base/timer.h"
+#include "fenix/saved_history.h"
+
+class HistoryItem;
 
 namespace Fenix {
 
@@ -19,48 +22,52 @@ enum class DeletedBy {
 
 class DeletedMsg final {
 public:
-	[[nodiscard]] static DeletedMsg &Instance();
+	explicit DeletedMsg(not_null<Main::Session*> session);
+	~DeletedMsg();
 
 	void recordDeletion(PeerId peerId, MsgId msgId, DeletedBy by);
 	[[nodiscard]] std::optional<DeletedBy> whoDeleted(
 		PeerId peerId,
 		MsgId msgId) const;
+	[[nodiscard]] std::vector<FullMsgId> all() const;
 	void forget(PeerId peerId, MsgId msgId);
-	void forgetAll(PeerId peerId);
-	[[nodiscard]] int countFor(PeerId peerId) const;
+	void clear();
 
-	// Set to true just before the user issues their own delete request.
-	// Cleared automatically after the next deletion update is processed.
-	void markNextAsMine();
-	[[nodiscard]] bool takeNextAsMine();
+	// The user is deleting these messages: when the server reports them
+	// deleted, they go away instead of being kept.
+	void markOwnDeletion(PeerId peerId, const QVector<MTPint> &ids);
+	[[nodiscard]] bool takeOwnDeletion(PeerId peerId, MsgId msgId);
 
-	[[nodiscard]] rpl::producer<> changes() const;
+	// Marks of the old file shared by all accounts, see saved_history.cpp.
+	void importLegacy(const std::vector<std::pair<FullMsgId, DeletedBy>> &list);
+
+	// The account logs out: nothing is kept or written any more.
+	void wipe();
 
 private:
-	DeletedMsg();
-	~DeletedMsg() = default;
+	struct Record {
+		DeletedBy by = DeletedBy::Other;
+		TimeId at = 0;
+	};
 
 	void load();
 	void save();
-	void scheduleSave();
+	void saveDelayed();
+	void trim();
 
-	struct Key {
-		PeerId peer;
-		MsgId msg;
-		friend constexpr bool operator<(
-				const Key &a, const Key &b) noexcept {
-			return std::tie(a.peer, a.msg) < std::tie(b.peer, b.msg);
-		}
-		friend constexpr bool operator==(
-				const Key &a, const Key &b) noexcept = default;
-	};
-	std::map<Key, DeletedBy> _records;
-	bool _markNextAsMine = false;
-	rpl::event_stream<> _changes;
+	const SessionFile _file;
+	std::map<FullMsgId, Record> _records;
+	base::flat_map<FullMsgId, crl::time> _own;
+	base::Timer _saveTimer;
+	bool _wiped = false;
+
 };
 
-[[nodiscard]] inline DeletedMsg &GetDeleted() {
-	return DeletedMsg::Instance();
-}
+[[nodiscard]] DeletedMsg &GetDeleted(not_null<Main::Session*> session);
+
+// Whether a message the server reports deleted stays in the chat: not when
+// the user deleted it from this app, its auto-delete timer ran out, or it
+// is a service message, which has no place for the "deleted" mark.
+[[nodiscard]] bool KeepDeleted(not_null<HistoryItem*> item);
 
 } // namespace Fenix

@@ -711,8 +711,9 @@ BottomInfo::Data BottomInfoDataFromMessage(not_null<Message*> message) {
 	}
 	// Novagram: mark messages preserved by Save Deleted Messages.
 	if (Fenix::Get().saveDeletedMsg()) {
-		const auto by = Fenix::GetDeleted().whoDeleted(
-			item->history()->peer->id,
+		const auto history = item->history();
+		const auto by = Fenix::GetDeleted(&history->session()).whoDeleted(
+			history->peer->id,
 			item->id);
 		if (by) {
 			result.fenixDeletedBy = [&] {

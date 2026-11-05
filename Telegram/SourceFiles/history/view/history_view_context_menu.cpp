@@ -1502,7 +1502,7 @@ bool AddEditHistoryAction(
 	}
 	const auto peer = item->history()->peer;
 	const auto msgId = item->id;
-	if (!Fenix::GetEdits().has(peer->id, msgId)) {
+	if (!Fenix::GetEdits(&peer->session()).has(peer->id, msgId)) {
 		return false;
 	}
 	const auto controller = list->controller();

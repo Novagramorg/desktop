@@ -3,33 +3,42 @@ This file is part of Novagram Desktop, a fork of Telegram Desktop by Vipads LLC.
 */
 #include "fenix/edit_history.h"
 
-#include "settings.h"
-
-#include <QtCore/QDir>
-#include <QtCore/QFile>
-#include <QtCore/QFileInfo>
-#include <QtCore/QJsonArray>
-#include <QtCore/QJsonDocument>
-#include <QtCore/QJsonObject>
+#include <QtCore/QDataStream>
 
 namespace Fenix {
 namespace {
 
+constexpr auto kSaveDelay = 5 * crl::time(1000);
 constexpr auto kMaxVersionsPerMessage = 30;
 
-[[nodiscard]] QString FilePath() {
-	return cWorkingDir() + u"tdata/fenix_edits.json"_q;
+// The whole file is written again on a change, so its size is kept small:
+// the messages edited longest ago go first when the texts take more.
+constexpr auto kMaxTextSize = int64(2 * 1024 * 1024);
+
+[[nodiscard]] int64 TextSize(const std::vector<EditHistory::Version> &list) {
+	auto result = int64();
+	for (const auto &version : list) {
+		result += version.text.size();
+	}
+	return result;
+}
+
+[[nodiscard]] TimeId LastDate(const std::vector<EditHistory::Version> &list) {
+	return list.empty() ? TimeId() : list.back().date;
 }
 
 } // namespace
 
-EditHistory &EditHistory::Instance() {
-	static EditHistory instance;
-	return instance;
+EditHistory::EditHistory(not_null<Main::Session*> session)
+: _file(session, QString::fromLatin1(kEditsFileName))
+, _saveTimer([=] { save(); }) {
+	load();
 }
 
-EditHistory::EditHistory() {
-	load();
+EditHistory::~EditHistory() {
+	if (_saveTimer.isActive()) {
+		save();
+	}
 }
 
 void EditHistory::recordEdit(
@@ -37,132 +46,180 @@ void EditHistory::recordEdit(
 		MsgId msgId,
 		QString text,
 		TimeId date) {
-	auto &list = _records[Key{ peerId, msgId }];
+	if (_wiped || !IsServerMsgId(msgId)) {
+		return;
+	}
+	auto &list = _records[FullMsgId(peerId, msgId)];
 	if (!list.empty() && list.back().text == text) {
 		return;
 	}
+	_textSize += text.size();
 	list.push_back({ std::move(text), date });
-	if (list.size() > kMaxVersionsPerMessage) {
-		list.erase(begin(list), end(list) - kMaxVersionsPerMessage);
+	if (int(list.size()) > kMaxVersionsPerMessage) {
+		const auto drop = int(list.size()) - kMaxVersionsPerMessage;
+		for (auto i = 0; i != drop; ++i) {
+			_textSize -= list[i].text.size();
+		}
+		list.erase(begin(list), begin(list) + drop);
 	}
-	scheduleSave();
-	_changes.fire({});
+	trim();
+	saveDelayed();
 }
 
 std::vector<EditHistory::Version> EditHistory::versions(
 		PeerId peerId,
 		MsgId msgId) const {
-	const auto i = _records.find(Key{ peerId, msgId });
+	const auto i = _records.find(FullMsgId(peerId, msgId));
 	return (i != end(_records)) ? i->second : std::vector<Version>();
 }
 
 bool EditHistory::has(PeerId peerId, MsgId msgId) const {
-	const auto i = _records.find(Key{ peerId, msgId });
+	const auto i = _records.find(FullMsgId(peerId, msgId));
 	return (i != end(_records)) && !i->second.empty();
 }
 
 void EditHistory::forget(PeerId peerId, MsgId msgId) {
-	if (_records.erase(Key{ peerId, msgId }) > 0) {
-		scheduleSave();
-		_changes.fire({});
+	const auto i = _records.find(FullMsgId(peerId, msgId));
+	if (i == end(_records)) {
+		return;
 	}
+	_textSize -= TextSize(i->second);
+	_records.erase(i);
+	saveDelayed();
 }
 
-void EditHistory::forgetAll(PeerId peerId) {
-	bool changed = false;
-	for (auto it = _records.begin(); it != _records.end();) {
-		if (it->first.peer == peerId) {
-			it = _records.erase(it);
-			changed = true;
-		} else {
-			++it;
-		}
+void EditHistory::clear() {
+	if (_wiped) {
+		return;
 	}
-	if (changed) {
-		scheduleSave();
-		_changes.fire({});
-	}
-}
-
-rpl::producer<> EditHistory::changes() const {
-	return _changes.events();
-}
-
-void EditHistory::scheduleSave() {
-	// Simple synchronous save for now; small JSON, infrequent writes.
+	_records.clear();
+	_textSize = 0;
+	_saveTimer.cancel();
 	save();
 }
 
-void EditHistory::load() {
-	auto file = QFile(FilePath());
-	if (!file.open(QIODevice::ReadOnly)) {
+void EditHistory::importLegacy(
+		std::vector<std::pair<FullMsgId, std::vector<Version>>> list) {
+	if (_wiped || list.empty()) {
 		return;
 	}
-	const auto bytes = file.readAll();
-	file.close();
+	for (auto &[key, versions] : list) {
+		if (versions.empty() || _records.contains(key)) {
+			continue;
+		}
+		if (int(versions.size()) > kMaxVersionsPerMessage) {
+			versions.erase(
+				begin(versions),
+				end(versions) - kMaxVersionsPerMessage);
+		}
+		_textSize += TextSize(versions);
+		_records.emplace(key, std::move(versions));
+	}
+	trim();
+	_saveTimer.cancel();
+	save();
+}
 
-	auto error = QJsonParseError();
-	const auto doc = QJsonDocument::fromJson(bytes, &error);
-	if (error.error != QJsonParseError::NoError || !doc.isArray()) {
+void EditHistory::wipe() {
+	_wiped = true;
+	_saveTimer.cancel();
+	_records.clear();
+	_textSize = 0;
+}
+
+void EditHistory::trim() {
+	if (_textSize <= kMaxTextSize) {
 		return;
 	}
-	const auto items = doc.array();
-	for (const auto &value : items) {
-		if (!value.isObject()) {
-			continue;
+	// Drop down to 90% at once, so trimming doesn't run on every edit.
+	auto order = std::vector<std::pair<TimeId, FullMsgId>>();
+	order.reserve(_records.size());
+	for (const auto &[key, list] : _records) {
+		order.emplace_back(LastDate(list), key);
+	}
+	ranges::sort(order);
+	const auto goal = kMaxTextSize * 9 / 10;
+	for (const auto &[date, key] : order) {
+		if (_textSize <= goal) {
+			break;
 		}
-		const auto obj = value.toObject();
-		const auto peer = PeerId(
-			obj.value(u"peer"_q).toVariant().toULongLong());
-		const auto msg = MsgId(
-			obj.value(u"msg"_q).toVariant().toLongLong());
-		if (!peer || !msg.bare) {
-			continue;
-		}
-		auto list = std::vector<Version>();
-		const auto versions = obj.value(u"versions"_q).toArray();
-		for (const auto &v : versions) {
-			if (!v.isObject()) {
-				continue;
-			}
-			const auto vo = v.toObject();
-			list.push_back({
-				vo.value(u"text"_q).toString(),
-				TimeId(vo.value(u"date"_q).toVariant().toLongLong()),
-			});
-		}
-		if (!list.empty()) {
-			_records[Key{ peer, msg }] = std::move(list);
-		}
+		const auto i = _records.find(key);
+		_textSize -= TextSize(i->second);
+		_records.erase(i);
 	}
 }
 
-void EditHistory::save() {
-	auto array = QJsonArray();
-	for (const auto &[key, list] : _records) {
-		auto versions = QJsonArray();
-		for (const auto &version : list) {
-			auto vo = QJsonObject();
-			vo.insert(u"text"_q, version.text);
-			vo.insert(u"date"_q, qint64(version.date));
-			versions.push_back(vo);
-		}
-		auto obj = QJsonObject();
-		obj.insert(u"peer"_q, QString::number(key.peer.value));
-		obj.insert(u"msg"_q, qint64(key.msg.bare));
-		obj.insert(u"versions"_q, versions);
-		array.push_back(obj);
+void EditHistory::saveDelayed() {
+	if (!_wiped && !_saveTimer.isActive()) {
+		_saveTimer.callOnce(kSaveDelay);
 	}
+}
 
-	const auto path = FilePath();
-	QDir().mkpath(QFileInfo(path).absolutePath());
-
-	auto file = QFile(path);
-	if (!file.open(QIODevice::WriteOnly | QIODevice::Truncate)) {
+void EditHistory::load() {
+	const auto payload = _file.read();
+	if (payload.isEmpty()) {
 		return;
 	}
-	file.write(QJsonDocument(array).toJson(QJsonDocument::Compact));
-	file.close();
+	QDataStream stream(payload);
+	stream.setVersion(QDataStream::Qt_5_1);
+	auto count = quint32();
+	stream >> count;
+	if (stream.status() != QDataStream::Ok) {
+		return;
+	}
+	auto records = std::map<FullMsgId, std::vector<Version>>();
+	auto size = int64();
+	for (auto i = quint32(); i != count; ++i) {
+		auto peer = quint64();
+		auto msg = qint64();
+		auto versionsCount = quint32();
+		stream >> peer >> msg >> versionsCount;
+		if (stream.status() != QDataStream::Ok
+			|| versionsCount > quint32(kMaxVersionsPerMessage)) {
+			return;
+		}
+		auto list = std::vector<Version>();
+		list.reserve(versionsCount);
+		for (auto j = quint32(); j != versionsCount; ++j) {
+			auto text = QString();
+			auto date = qint32();
+			stream >> text >> date;
+			if (stream.status() != QDataStream::Ok) {
+				return;
+			}
+			list.push_back({ std::move(text), TimeId(date) });
+		}
+		const auto peerId = DeserializePeerId(peer);
+		if (peerId && IsServerMsgId(MsgId(msg)) && !list.empty()) {
+			auto &now = records[FullMsgId(peerId, MsgId(msg))];
+			size += TextSize(list) - TextSize(now);
+			now = std::move(list);
+		}
+	}
+	_records = std::move(records);
+	_textSize = size;
+}
+
+void EditHistory::save() {
+	if (_wiped) {
+		return;
+	}
+	auto payload = QByteArray();
+	{
+		QDataStream stream(&payload, QIODevice::WriteOnly);
+		stream.setVersion(QDataStream::Qt_5_1);
+		stream << quint32(_records.size());
+		for (const auto &[key, list] : _records) {
+			stream
+				<< quint64(SerializePeerId(key.peer))
+				<< qint64(key.msg.bare)
+				<< quint32(list.size());
+			for (const auto &version : list) {
+				stream << version.text << qint32(version.date);
+			}
+		}
+	}
+	_file.write(payload);
 }
 
 } // namespace Fenix

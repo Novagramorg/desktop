@@ -1014,6 +1014,8 @@ PRIVATE
     fenix/chat_lock_box.h
     fenix/reminder.cpp
     fenix/reminder.h
+    fenix/saved_history.cpp
+    fenix/saved_history.h
     fenix/photo_to_text.cpp
     fenix/photo_to_text.h
     fenix/photo_to_text_win.cpp
