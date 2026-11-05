@@ -85,6 +85,7 @@ set(style_files
     window/window_main_menu.style
     editor/editor.style
     statistics/statistics.style
+    fenix/fenix.style
 )
 
 set(dependent_style_files

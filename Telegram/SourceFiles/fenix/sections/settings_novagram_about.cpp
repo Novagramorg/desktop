@@ -11,6 +11,7 @@ This file is part of Novagram Desktop, a fork of Telegram Desktop by Vipads LLC.
 #include "settings/settings_common.h"
 #include "settings/settings_common_session.h"
 #include "settings/sections/settings_main.h"
+#include "ui/painter.h"
 #include "ui/rp_widget.h"
 #include "ui/ui_utility.h"
 #include "ui/vertical_list.h"
@@ -19,6 +20,7 @@ This file is part of Novagram Desktop, a fork of Telegram Desktop by Vipads LLC.
 #include "ui/wrap/vertical_layout.h"
 #include "window/window_session_controller.h"
 #include "window/window_session_controller_link_info.h"
+#include "styles/style_fenix.h"
 #include "styles/style_layers.h"
 #include "styles/style_menu_icons.h"
 #include "styles/style_settings.h"
@@ -43,6 +45,47 @@ constexpr auto kEmail = "admin@novagram.org";
 	return u"novagram/about/"_q + name;
 }
 
+// The rows are two lines tall: the bottom padding holds the value line.
+[[nodiscard]] const style::SettingsButton &RowStyle() {
+	static const auto result = [] {
+		auto st = st::novagramAboutRow;
+		st.padding.setBottom(st.padding.bottom()
+			+ st::novagramAboutValueSkip
+			+ st::novagramAboutValueFont->height);
+		return st;
+	}();
+	return result;
+}
+
+// The value under the row's title, on the full width of the row, so a
+// username or an address is never cut by a long title.
+void AddValueLine(
+		not_null<Ui::SettingsButton*> button,
+		const QString &value) {
+	const auto &st = RowStyle();
+	const auto font = st::novagramAboutValueFont;
+	const auto line = Ui::CreateChild<Ui::RpWidget>(button.get());
+	line->setAttribute(Qt::WA_TransparentForMouseEvents);
+	button->widthValue() | rpl::on_next([=, &st](int width) {
+		line->setGeometry(
+			st.padding.left(),
+			st.padding.top() + st.height + st::novagramAboutValueSkip,
+			std::max(width - st.padding.left() - st.padding.right(), 0),
+			font->height);
+	}, line->lifetime());
+	line->paintRequest() | rpl::on_next([=] {
+		auto p = Painter(line);
+		p.setFont(font);
+		p.setPen(st::novagramAboutValueFg);
+		p.drawTextLeft(
+			0,
+			0,
+			line->width(),
+			font->elided(value, line->width()));
+	}, line->lifetime());
+	line->show();
+}
+
 void AddRow(
 		SectionBuilder &builder,
 		const QString &name,
@@ -55,12 +98,16 @@ void AddRow(
 	const auto button = builder.addButton({
 		.id = id,
 		.title = std::move(title),
+		.st = &RowStyle(),
 		.icon = { icon },
-		.label = rpl::single(value),
 		.onClick = std::move(click),
 		.keywords = { u"about"_q, u"novagram"_q },
 	});
-	if (button && controller) {
+	if (!button) {
+		return;
+	}
+	AddValueLine(button, value);
+	if (controller) {
 		Fenix::SetupCopyDeepLink(button, controller, NovagramAboutId(), id);
 	}
 }
@@ -68,15 +115,11 @@ void AddRow(
 void AddCentered(
 		not_null<Ui::VerticalLayout*> container,
 		rpl::producer<QString> text,
-		const style::FlatLabel &st,
-		const style::color *fg) {
-	const auto label = container->add(
+		const style::FlatLabel &st) {
+	container->add(
 		object_ptr<Ui::FlatLabel>(container, std::move(text), st),
 		st::boxRowPadding,
 		style::al_top);
-	if (fg) {
-		label->setTextColorOverride((*fg)->c);
-	}
 }
 
 void BuildHeader(SectionBuilder &builder) {
@@ -84,9 +127,9 @@ void BuildHeader(SectionBuilder &builder) {
 	if (!container) {
 		return;
 	}
-	Ui::AddSkip(container);
+	Ui::AddSkip(container, st::novagramAboutLogoTop);
 
-	const auto size = st::settingsInfoPhotoSize;
+	const auto size = st::novagramAboutLogoSize;
 	const auto logo = container->add(
 		object_ptr<Ui::RpWidget>(container),
 		style::margins(),
@@ -101,18 +144,24 @@ void BuildHeader(SectionBuilder &builder) {
 			Qt::SmoothTransformation));
 	image->setDevicePixelRatio(ratio);
 	logo->paintRequest() | rpl::on_next([=] {
+		// The layout stretches the widget to the full width: keep the logo
+		// in the middle, under it the centered name and tagline.
 		auto p = QPainter(logo);
-		p.drawImage(QRect(0, 0, size, size), *image);
+		const auto left = (logo->width() - size) / 2;
+		p.drawImage(QRect(left, 0, size, size), *image);
 	}, logo->lifetime());
 
-	Ui::AddSkip(container);
-	AddCentered(container, rpl::single(u"Novagram"_q), st::boxTitle, nullptr);
+	Ui::AddSkip(container, st::novagramAboutNameTop);
+	AddCentered(
+		container,
+		rpl::single(u"Novagram"_q),
+		st::novagramAboutName);
+	Ui::AddSkip(container, st::novagramAboutTaglineTop);
 	AddCentered(
 		container,
 		tr::lng_fenix_about_tagline(),
-		st::boxLabel,
-		&st::windowSubTextFg);
-	Ui::AddSkip(container);
+		st::novagramAboutTagline);
+	Ui::AddSkip(container, st::novagramAboutHeaderBottom);
 	Ui::AddDivider(container);
 }
 

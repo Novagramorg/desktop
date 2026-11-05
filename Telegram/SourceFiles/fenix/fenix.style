@@ -1,0 +1,36 @@
+/*
+This file is part of Novagram Desktop, a fork of Telegram Desktop by Vipads LLC.
+*/
+using "ui/basic.style";
+using "ui/widgets/widgets.style";
+using "settings/settings.style";
+
+// Settings > Novagram > About: the header.
+novagramAboutLogoTop: 24px;
+novagramAboutLogoSize: 96px;
+novagramAboutNameTop: 14px;
+novagramAboutName: FlatLabel(defaultFlatLabel) {
+	textFg: windowBoldFg;
+	align: align(top);
+	style: TextStyle(defaultTextStyle) {
+		font: font(20px semibold);
+	}
+}
+novagramAboutTaglineTop: 4px;
+novagramAboutTagline: FlatLabel(defaultFlatLabel) {
+	textFg: windowSubTextFg;
+	align: align(top);
+	style: TextStyle(defaultTextStyle) {
+		font: font(14px);
+	}
+}
+novagramAboutHeaderBottom: 22px;
+
+// Its rows: the title, and under it the value on a line of its own, so the
+// value is never cut however narrow the window or long the title.
+novagramAboutRow: SettingsButton(settingsButton) {
+	padding: margins(60px, 9px, 22px, 9px);
+}
+novagramAboutValueSkip: 1px;
+novagramAboutValueFont: font(13px);
+novagramAboutValueFg: windowActiveTextFg;
