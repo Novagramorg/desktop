@@ -7,6 +7,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "history/view/history_view_pinned_section.h"
 
+#include "fenix/special_forward.h"
 #include "history/view/history_view_chat_section.h"
 #include "history/view/history_view_top_bar_widget.h"
 #include "history/view/history_view_translate_bar.h"
@@ -204,6 +205,10 @@ PinnedWidget::PinnedWidget(
 	_topBar->forwardSelectionRequest(
 	) | rpl::on_next([=] {
 		confirmForwardSelected();
+	}, _topBar->lifetime());
+	_topBar->fenixSpecialForwardSelectionRequest(
+	) | rpl::on_next([=] {
+		Fenix::SpecialForwardSelected(_inner);
 	}, _topBar->lifetime());
 	_topBar->clearSelectionRequest(
 	) | rpl::on_next([=] {

@@ -1018,6 +1018,8 @@ PRIVATE
     fenix/reminder.h
     fenix/saved_history.cpp
     fenix/saved_history.h
+    fenix/special_forward.cpp
+    fenix/special_forward.h
     fenix/photo_to_text.cpp
     fenix/photo_to_text.h
     fenix/photo_to_text_win.cpp

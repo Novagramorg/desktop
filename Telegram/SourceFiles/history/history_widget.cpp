@@ -1132,6 +1132,10 @@ HistoryWidget::HistoryWidget(
 	) | rpl::on_next([=] {
 		forwardSelected();
 	}, _topBar->lifetime());
+	_topBar->fenixSpecialForwardSelectionRequest(
+	) | rpl::on_next([=] {
+		specialForwardSelected();
+	}, _topBar->lifetime());
 	_topBar->deleteSelectionRequest(
 	) | rpl::on_next([=] {
 		confirmDeleteSelected();

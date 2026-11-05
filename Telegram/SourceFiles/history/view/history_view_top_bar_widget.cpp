@@ -122,6 +122,10 @@ TopBarWidget::TopBarWidget(
 , _forward(this, tr::lng_selected_forward(), st::defaultActiveButton)
 , _sendNow(this, tr::lng_selected_send_now(), st::defaultActiveButton)
 , _delete(this, tr::lng_selected_delete(), st::defaultActiveButton)
+, _fenixSpecialForward(
+	this,
+	tr::lng_fenix_special_forward(),
+	st::defaultActiveButton)
 , _back(this, st::historyTopBarBack)
 , _cancelChoose(this, st::topBarCloseChoose)
 , _call(this, st::topBarCall)
@@ -137,6 +141,8 @@ TopBarWidget::TopBarWidget(
 	_forward->setTextTransform(Ui::RoundButtonTextTransform::ToUpper);
 	_sendNow->setTextTransform(Ui::RoundButtonTextTransform::ToUpper);
 	_delete->setTextTransform(Ui::RoundButtonTextTransform::ToUpper);
+	_fenixSpecialForward->setTextTransform(
+		Ui::RoundButtonTextTransform::ToUpper);
 
 	Lang::Updated(
 	) | rpl::on_next([=] {
@@ -145,6 +151,12 @@ TopBarWidget::TopBarWidget(
 
 	_forward->setClickedCallback([=] { _forwardSelection.fire({}); });
 	_forward->setWidthChangedCallback([=] { updateControlsGeometry(); });
+	_fenixSpecialForward->setClickedCallback([=] {
+		_fenixSpecialForwardSelection.fire({});
+	});
+	_fenixSpecialForward->setWidthChangedCallback([=] {
+		updateControlsGeometry();
+	});
 	_sendNow->setClickedCallback([=] { _sendNowSelection.fire({}); });
 	_sendNow->setWidthChangedCallback([=] { updateControlsGeometry(); });
 	_delete->setClickedCallback([=] { _deleteSelection.fire({}); });
@@ -1158,11 +1170,31 @@ void TopBarWidget::updateControlsGeometry() {
 		+ _clear->width();
 	buttonsWidth += buttonsLeft + st::topBarActionSkip * 3;
 
+	// Novagram: "Special forward" goes beside Forward only while all the
+	// buttons keep their full paddings with it, else it stays hidden (the
+	// selection's context menu has it too).
+	{
+		const auto padding = -st::defaultActiveButton.width;
+		const auto shown = 1
+			+ (_forward->isHidden() ? 0 : 1)
+			+ (_sendNow->isHidden() ? 0 : 1)
+			+ (_delete->isHidden() ? 0 : 1);
+		const auto extra = _fenixSpecialForward->contentWidth()
+			+ st::topBarActionSkip;
+		const auto fits = !_forward->isHidden()
+			&& (width() - buttonsWidth - extra >= shown * padding);
+		_fenixSpecialForward->setVisible(fits);
+		if (fits) {
+			buttonsWidth += extra;
+		}
+	}
+
 	auto widthLeft = std::min(
 		width() - buttonsWidth,
 		-2 * st::defaultActiveButton.width);
 	auto buttonFullWidth = std::min(-(widthLeft / 2), 0);
 	_forward->setFullWidth(buttonFullWidth);
+	_fenixSpecialForward->setFullWidth(buttonFullWidth);
 	_sendNow->setFullWidth(buttonFullWidth);
 	_delete->setFullWidth(buttonFullWidth);
 
@@ -1171,6 +1203,11 @@ void TopBarWidget::updateControlsGeometry() {
 	_forward->moveToLeft(buttonsLeft, selectedButtonsTop);
 	if (!_forward->isHidden()) {
 		buttonsLeft += _forward->width() + st::topBarActionSkip;
+	}
+
+	_fenixSpecialForward->moveToLeft(buttonsLeft, selectedButtonsTop);
+	if (!_fenixSpecialForward->isHidden()) {
+		buttonsLeft += _fenixSpecialForward->width() + st::topBarActionSkip;
 	}
 
 	_sendNow->moveToLeft(buttonsLeft, selectedButtonsTop);
@@ -1187,6 +1224,7 @@ void TopBarWidget::updateControlsGeometry() {
 			: st::buttonRadius;
 		const auto buttons = std::array{
 			_forward.data(),
+			_fenixSpecialForward.data(),
 			_sendNow.data(),
 			_delete.data(),
 		};
