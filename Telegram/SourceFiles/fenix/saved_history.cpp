@@ -8,6 +8,7 @@ This file is part of Novagram Desktop, a fork of Telegram Desktop by Vipads LLC.
 #include "fenix/deleted_msg.h"
 #include "fenix/edit_history.h"
 #include "fenix/kept_messages.h"
+#include "fenix/message_cache.h"
 #include "history/history.h"
 #include "history/history_item.h"
 #include "main/main_account.h"
@@ -34,12 +35,14 @@ struct Stores {
 	explicit Stores(not_null<Main::Session*> session)
 	: deleted(session)
 	, edits(session)
-	, kept(session) {
+	, kept(session)
+	, cache(session) {
 	}
 
 	DeletedMsg deleted;
 	EditHistory edits;
 	KeptMessages kept;
+	MessageCache cache;
 };
 
 using Registry = base::flat_map<
@@ -258,6 +261,10 @@ KeptMessages &GetKept(not_null<Main::Session*> session) {
 	return Resolve(session).kept;
 }
 
+MessageCache &GetMessageCache(not_null<Main::Session*> session) {
+	return Resolve(session).cache;
+}
+
 void RememberOwnDeletion(
 		not_null<History*> history,
 		const QVector<MTPint> &ids) {
@@ -267,6 +274,7 @@ void RememberOwnDeletion(
 	for (const auto &id : ids) {
 		stores.edits.forget(peerId, MsgId(id.v));
 		stores.kept.forget(peerId, MsgId(id.v));
+		stores.cache.forget(peerId, MsgId(id.v));
 	}
 }
 
@@ -354,6 +362,7 @@ void ClearSavedHistory(not_null<Main::Session*> session) {
 	stores.deleted.clear();
 	stores.edits.clear();
 	stores.kept.clear();
+	stores.cache.clear();
 
 	// The kept messages are gone from the server already: now they go from
 	// the chats too, as they would have without Save Deleted Messages.
@@ -399,6 +408,9 @@ void WipeSavedHistory(not_null<Main::Session*> session) {
 		stores->deleted.wipe();
 		stores->edits.wipe();
 		stores->kept.wipe();
+		stores->cache.wipe();
+	} else {
+		RemoveMessageCacheFiles(session);
 	}
 
 	// A write still queued would bring a file back after its removal.

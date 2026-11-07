@@ -10,6 +10,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "fenix/fenix_settings.h"
 #include "fenix/deleted_msg.h"
 #include "fenix/kept_messages.h"
+#include "fenix/message_cache.h"
 #include "fenix/saved_history.h"
 #include "main/main_session.h"
 #include "main/main_session_settings.h"
@@ -3072,15 +3073,17 @@ bool Session::updateExistingMessage(const MTPDmessage &data) {
 }
 
 void Session::updateEditedMessage(const MTPMessage &data) {
-	// Novagram: a kept copy shows the message as it was last.
-	Fenix::RememberLoaded(_session, data);
-
 	const auto existing = data.match([](const MTPDmessageEmpty &)
 			-> HistoryItem* {
 		return nullptr;
 	}, [&](const auto &data) {
 		return message(peerFromMTP(data.vpeer_id()), data.vid().v);
 	});
+
+	// Novagram: a kept copy shows the message as it was last. The earlier
+	// text of one not loaded comes from the account's cache of messages.
+	Fenix::RememberEdited(_session, data, existing != nullptr);
+
 	if (!existing) {
 		Reactions::CheckUnknownForUnread(this, data);
 		return;
@@ -3358,6 +3361,16 @@ void Session::checkFormattedDateUpdates() {
 void Session::processMessagesDeleted(
 		PeerId peerId,
 		const QVector<MTPint> &data) {
+	// Novagram: a message deleted while it isn't loaded, even while
+	// Novagram was closed, is kept from the account's cache of messages.
+	for (const auto &messageId : data) {
+		if (!message(peerId, MsgId(messageId.v))) {
+			Fenix::GetMessageCache(_session).deleted(
+				peerId,
+				MsgId(messageId.v));
+		}
+	}
+
 	const auto list = messagesList(peerId);
 	const auto affected = historyLoaded(peerId);
 	if (!list && !affected) {
@@ -3427,6 +3440,12 @@ void Session::processNonChannelMessagesDeleted(const QVector<MTPint> &data) {
 			}
 			toDestroy.push_back(item);
 			historiesToCheck.emplace(history);
+		} else {
+			// Novagram: deleted while not loaded, even while Novagram was
+			// closed: kept from the account's cache of messages.
+			Fenix::GetMessageCache(_session).deleted(
+				PeerId(),
+				MsgId(messageId.v));
 		}
 	}
 	if (!toDestroy.empty()) {

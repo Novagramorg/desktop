@@ -4,9 +4,11 @@ This file is part of Novagram Desktop, a fork of Telegram Desktop by Vipads LLC.
 #include "fenix/kept_messages.h"
 
 #include "base/unixtime.h"
+#include "data/data_history_messages.h"
 #include "data/data_session.h"
 #include "fenix/deleted_msg.h"
 #include "fenix/fenix_settings.h"
+#include "fenix/message_cache.h"
 #include "history/history.h"
 #include "history/history_item.h"
 #include "history/view/history_view_element.h"
@@ -30,19 +32,19 @@ constexpr auto kMaxCopySize = 256 * 1024;
 		+ QString::number(SerializePeerId(peerId), 16);
 }
 
-[[nodiscard]] QByteArray Serialize(const MTPMessage &message) {
-	auto buffer = mtpBuffer();
-	message.write(buffer);
-	return QByteArray(
-		reinterpret_cast<const char*>(buffer.constData()),
-		buffer.size() * sizeof(mtpPrime));
-}
-
 [[nodiscard]] FullMsgId MessageId(const MTPMessage &message) {
 	return message.match([](const MTPDmessage &data) {
 		return FullMsgId(peerFromMTP(data.vpeer_id()), data.vid().v);
 	}, [](const auto &) {
 		return FullMsgId();
+	});
+}
+
+[[nodiscard]] bool MessageOut(const MTPMessage &message) {
+	return message.match([](const MTPDmessage &data) {
+		return data.is_out();
+	}, [](const auto &) {
+		return false;
 	});
 }
 
@@ -86,6 +88,14 @@ void EnsureDeletedMark(
 
 } // namespace
 
+QByteArray SerializeMessage(const MTPMessage &message) {
+	auto buffer = mtpBuffer();
+	message.write(buffer);
+	return QByteArray(
+		reinterpret_cast<const char*>(buffer.constData()),
+		buffer.size() * sizeof(mtpPrime));
+}
+
 std::optional<MTPMessage> ParseKept(const QByteArray &data) {
 	if (data.isEmpty() || (data.size() % sizeof(mtpPrime))) {
 		return std::nullopt;
@@ -108,6 +118,17 @@ void RememberLoaded(
 	if (Get().saveDeletedMsg()) {
 		GetKept(session).remember(message);
 	}
+	GetMessageCache(session).remember(message);
+}
+
+void RememberEdited(
+		not_null<Main::Session*> session,
+		const MTPMessage &message,
+		bool loaded) {
+	if (Get().saveDeletedMsg()) {
+		GetKept(session).remember(message);
+	}
+	GetMessageCache(session).edited(message, loaded);
 }
 
 KeptMessages::KeptMessages(not_null<Main::Session*> session)
@@ -140,7 +161,10 @@ void KeptMessages::remember(const MTPMessage &message) {
 	if (!id || !IsServerMsgId(id.msg)) {
 		return;
 	}
-	auto data = Serialize(message);
+	if (MessageOut(message)) {
+		return; // The user's own messages are not kept, see KeepDeleted.
+	}
+	auto data = SerializeMessage(message);
 	if (data.size() <= kMaxCopySize) {
 		_loaded[id] = std::move(data);
 	}
@@ -155,17 +179,39 @@ void KeptMessages::keep(not_null<HistoryItem*> item) {
 		// Loaded before Save Deleted Messages was on: only its mark stays.
 		return;
 	}
-	const auto peerId = item->history()->peer->id;
+	insert(item->history()->peer->id, item->id, i->second);
+}
+
+bool KeptMessages::keepCopy(
+		PeerId peerId,
+		MsgId msgId,
+		const QByteArray &data) {
+	if (_wiped || data.size() > kMaxCopySize) {
+		return false;
+	}
+	const auto message = ParseKept(data);
+	if (!message
+		|| MessageId(*message) != FullMsgId(peerId, msgId)
+		|| AutoDeleted(*message)) {
+		return false;
+	}
+	insert(peerId, msgId, data);
+	return true;
+}
+
+void KeptMessages::insert(
+		PeerId peerId,
+		MsgId msgId,
+		const QByteArray &data) {
 	auto &list = chat(peerId).list;
-	const auto id = item->id;
-	const auto j = ranges::lower_bound(list, id, ranges::less(), &Kept::id);
-	if (j != end(list) && j->id == id) {
-		j->data = i->second;
+	const auto j = ranges::lower_bound(list, msgId, ranges::less(), &Kept::id);
+	if (j != end(list) && j->id == msgId) {
+		j->data = data;
 	} else {
 		list.insert(j, Kept{
-			.id = id,
+			.id = msgId,
 			.at = base::unixtime::now(),
-			.data = i->second,
+			.data = data,
 		});
 		if (int(list.size()) > kMaxPerChat) {
 			list.erase(ranges::min_element(list, ranges::less(), &Kept::at));
@@ -455,6 +501,26 @@ void KeptHistory::AddToSlice(
 		if (!ranges::contains(ids, kept.id)) {
 			ids.push_back(kept.id);
 		}
+	}
+}
+
+void KeptHistory::ShowLate(not_null<History*> history, MsgId msgId) {
+	const auto messages = history->maybeMessages();
+	if (!messages || Restoring || !Get().saveDeletedMsg()) {
+		return;
+	}
+	const auto &list = GetKept(&history->session()).list(history->peer->id);
+	const auto i = ranges::find(list, msgId, &KeptMessages::Kept::id);
+	if (i == end(list)) {
+		return;
+	}
+	const auto kept = *i;
+
+	Restoring = true;
+	const auto guard = gsl::finally([] { Restoring = false; });
+	if (Item(history, kept)) {
+		// Into the loaded part of the chat that has its place, if any.
+		messages->addExisting(msgId, { msgId, msgId });
 	}
 }
 

@@ -7,6 +7,7 @@ This file is part of Novagram Desktop, a fork of Telegram Desktop by Vipads LLC.
 #include "fenix/fenix_deep_links.h"
 #include "fenix/chat_lock.h"
 #include "fenix/chat_lock_box.h"
+#include "fenix/message_cache.h"
 #include "fenix/saved_history.h"
 #include "main/main_session.h"
 #include "main/main_session_settings.h"
@@ -133,18 +134,24 @@ void BuildMessagesRows(SectionBuilder &builder) {
 		Fenix::Get().saveEditHistoryValue());
 
 	// The size of the account's saved history on its row, as on Android,
-	// measured again once it is cleared.
+	// measured again once it is cleared, with its cache of messages.
 	const auto cleared = std::make_shared<rpl::event_stream<>>();
+	auto filesSize = rpl::single(rpl::empty) | rpl::then(
+		cleared->events()
+	) | rpl::map([=] {
+		return Fenix::SavedHistorySize(session);
+	});
 	const auto id = ControlId(u"clear_saved_history"_q);
 	const auto button = builder.addButton({
 		.id = id,
 		.title = tr::lng_fenix_saved_history_clear(),
 		.icon = { &st::menuIconClear },
-		.label = rpl::single(rpl::empty) | rpl::then(
-			cleared->events()
-		) | rpl::map([=] {
-			return Ui::FormatSizeText(Fenix::SavedHistorySize(session));
-		}),
+		.label = rpl::combine(
+			std::move(filesSize),
+			Fenix::GetMessageCache(session).sizeValue(),
+			[](int64 files, int64 cache) {
+				return Ui::FormatSizeText(files + cache);
+			}),
 		.onClick = [=] {
 			if (!controller) {
 				return;

@@ -37,6 +37,11 @@ public:
 	// Someone deleted this message: its copy goes to the chat's file.
 	void keep(not_null<HistoryItem*> item);
 
+	// Someone deleted a message that wasn't loaded: its copy from the
+	// account's cache of messages (see fenix/message_cache.h). False when
+	// it isn't kept: a broken copy, or the chat's auto-delete removed it.
+	bool keepCopy(PeerId peerId, MsgId msgId, const QByteArray &data);
+
 	// The chat's kept messages, by id. Reads the chat's file on first use.
 	[[nodiscard]] const std::vector<Kept> &list(PeerId peerId);
 	void forget(PeerId peerId, MsgId msgId);
@@ -63,6 +68,7 @@ private:
 	[[nodiscard]] Chat &chat(PeerId peerId);
 	[[nodiscard]] SessionFile file(PeerId peerId) const;
 	void load(PeerId peerId, Chat &chat);
+	void insert(PeerId peerId, MsgId msgId, const QByteArray &data);
 	void changed(PeerId peerId);
 	void saveDirty();
 	void save(PeerId peerId, const Chat &chat);
@@ -80,12 +86,21 @@ private:
 
 [[nodiscard]] KeptMessages &GetKept(not_null<Main::Session*> session);
 
+[[nodiscard]] QByteArray SerializeMessage(const MTPMessage &message);
 [[nodiscard]] std::optional<MTPMessage> ParseKept(const QByteArray &data);
 
-// Holds the server data of a message being loaded, see remember().
+// Holds the server data of a message being loaded, see remember(), also in
+// the account's cache of messages.
 void RememberLoaded(
 	not_null<Main::Session*> session,
 	const MTPMessage &message);
+
+// The same for a message edited, loaded or not. The earlier text of one
+// not loaded comes from the cache, see MessageCache::edited().
+void RememberEdited(
+	not_null<Main::Session*> session,
+	const MTPMessage &message,
+	bool loaded);
 
 // Works on History's blocks, as its friend.
 class KeptHistory final {
@@ -103,6 +118,10 @@ public:
 		std::vector<MsgId> &ids,
 		MsgRange range,
 		int *fullCount = nullptr);
+
+	// A message kept after the chat's view has it loaded: it shows in its
+	// place there at once.
+	static void ShowLate(not_null<History*> history, MsgId msgId);
 
 	// The item of a kept message, created from its copy when needed (it is
 	// not added to the history's blocks).
