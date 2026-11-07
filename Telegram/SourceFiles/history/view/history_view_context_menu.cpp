@@ -1498,14 +1498,11 @@ bool AddEditHistoryAction(
 		const ContextMenuRequest &request,
 		not_null<ListWidget*> list) {
 	const auto item = request.item;
-	if (!item || !IsServerMsgId(item->id)) {
+	if (!item || !Fenix::HasEditHistoryAction(item)) {
 		return false;
 	}
 	const auto peer = item->history()->peer;
 	const auto msgId = item->id;
-	if (!Fenix::GetEdits(&peer->session()).has(peer->id, msgId)) {
-		return false;
-	}
 	const auto controller = list->controller();
 	menu->addAction(tr::lng_fenix_edit_history(tr::now), crl::guard(
 		controller,

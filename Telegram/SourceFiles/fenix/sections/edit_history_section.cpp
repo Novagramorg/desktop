@@ -22,6 +22,7 @@ This file is part of Novagram Desktop, a fork of Telegram Desktop by Vipads LLC.
 #include "ui/ui_utility.h"
 #include "styles/style_info.h"
 #include "styles/style_chat.h"
+#include "styles/style_fenix.h"
 
 #include <QtCore/QLocale>
 
@@ -29,12 +30,16 @@ namespace Fenix {
 namespace {
 
 // Inner scrollable widget that paints every saved version as a chat-style
-// incoming bubble, with its edit time in the bottom-right corner.
+// incoming bubble, with its edit time in the bottom-right corner. Without
+// any, it explains why, as Android does: the menu item shows on every
+// edited message, but only edits seen while they are saved are kept.
 class HistoryInner final : public Ui::RpWidget {
 public:
 	HistoryInner(
 		QWidget *parent,
 		std::vector<EditHistory::Version> versions);
+
+	void setViewportHeight(int height);
 
 protected:
 	int resizeGetHeight(int newWidth) override;
@@ -48,14 +53,24 @@ private:
 		int contentWidth = 0;
 		QRect bubble;
 	};
+	void paintEmpty(Painter &p);
+
 	std::vector<Entry> _entries;
+	Ui::Text::String _emptyAbout;
+	QRect _emptyRect;
+	int _viewportHeight = 0;
 
 };
 
 HistoryInner::HistoryInner(
 	QWidget *parent,
 	std::vector<EditHistory::Version> versions)
-: RpWidget(parent) {
+: RpWidget(parent)
+, _emptyAbout(st::novagramDeletedEmptyWidth) {
+	_emptyAbout.setText(
+		st::defaultTextStyle,
+		tr::lng_fenix_edit_history_empty_about(tr::now),
+		Ui::NameTextOptions());
 	_entries.reserve(versions.size());
 	for (const auto &version : versions) {
 		auto entry = Entry();
@@ -73,7 +88,42 @@ HistoryInner::HistoryInner(
 	}
 }
 
+void HistoryInner::setViewportHeight(int height) {
+	if (_viewportHeight != height) {
+		_viewportHeight = height;
+		if (_entries.empty()) {
+			resizeToWidth(width());
+		}
+	}
+}
+
 int HistoryInner::resizeGetHeight(int newWidth) {
+	if (_entries.empty()) {
+		// In the middle of the screen, as the chat's empty notice.
+		const auto &margin = st::msgMargin;
+		const auto &epad = st::novagramDeletedEmptyPadding;
+		const auto inner = std::max(
+			std::min(
+				int(st::novagramDeletedEmptyWidth),
+				newWidth - margin.left() - margin.right()
+					- epad.left() - epad.right()),
+			1);
+		const auto height = epad.top()
+			+ st::novagramDeletedEmptyTitleFont->height
+			+ st::novagramDeletedEmptySkip
+			+ _emptyAbout.countHeight(inner)
+			+ epad.bottom();
+		const auto full = inner + epad.left() + epad.right();
+		const auto outer = std::max(
+			_viewportHeight,
+			height + margin.top() + margin.bottom());
+		_emptyRect = QRect(
+			(newWidth - full) / 2,
+			(outer - height) / 2,
+			full,
+			height);
+		return outer;
+	}
 	const auto pad = st::msgPadding;
 	const auto leftMargin = st::msgMargin.left();
 	const auto rightSkip = st::msgMargin.right();
@@ -106,6 +156,10 @@ int HistoryInner::resizeGetHeight(int newWidth) {
 
 void HistoryInner::paintEvent(QPaintEvent *e) {
 	auto p = Painter(this);
+	if (_entries.empty()) {
+		paintEmpty(p);
+		return;
+	}
 	const auto clip = e->rect();
 	const auto pad = st::msgPadding;
 	const auto radius = st::bubbleRadiusLarge;
@@ -138,6 +192,37 @@ void HistoryInner::paintEvent(QPaintEvent *e) {
 				+ st::msgDateFont->ascent,
 			entry.date);
 	}
+}
+
+void HistoryInner::paintEmpty(Painter &p) {
+	const auto &epad = st::novagramDeletedEmptyPadding;
+	{
+		auto hq = PainterHighQualityEnabler(p);
+		p.setPen(Qt::NoPen);
+		p.setBrush(st::msgServiceBg);
+		p.drawRoundedRect(
+			_emptyRect,
+			st::bubbleRadiusLarge,
+			st::bubbleRadiusLarge);
+	}
+	const auto inner = _emptyRect.marginsRemoved(epad);
+	const auto font = st::novagramDeletedEmptyTitleFont;
+	const auto title = font->elided(
+		tr::lng_fenix_edit_history_empty(tr::now),
+		inner.width());
+	p.setFont(font);
+	p.setPen(st::msgServiceFg);
+	p.drawText(
+		inner.x() + (inner.width() - font->width(title)) / 2,
+		inner.y() + font->ascent,
+		title);
+	_emptyAbout.draw(p, {
+		.position = QPoint(
+			inner.x(),
+			inner.y() + font->height + st::novagramDeletedEmptySkip),
+		.availableWidth = inner.width(),
+		.align = style::al_top,
+	});
 }
 
 class Widget;
@@ -249,7 +334,9 @@ void Widget::setupTopBar() {
 		p.fillRect(clip, st::windowBg);
 	}, _topBar->lifetime());
 
-	_title->setText(_peer->name());
+	_title->setText(_peer->isSelf()
+		? tr::lng_saved_messages(tr::now)
+		: _peer->name());
 	_title->setAttribute(Qt::WA_TransparentForMouseEvents);
 
 	_back->setClickedCallback([=] {
@@ -299,6 +386,7 @@ void Widget::resizeEvent(QResizeEvent *e) {
 	const auto scrollTop = topBarHeight;
 	_scroll->setGeometry(0, scrollTop, width(), height() - scrollTop);
 	if (_inner) {
+		_inner->setViewportHeight(_scroll->height());
 		_inner->resizeToWidth(_scroll->width());
 	}
 }

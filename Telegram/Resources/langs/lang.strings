@@ -9322,7 +9322,8 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 "lng_fenix_save_edit_history" = "Save Edit History";
 "lng_fenix_save_edit_history_about" = "Keep previous versions of edited messages, so you can see what a message said before it was changed.";
 "lng_fenix_edit_history" = "Edit History";
-"lng_fenix_edit_history_empty" = "No previous versions saved for this message.";
+"lng_fenix_edit_history_empty" = "No edit history yet";
+"lng_fenix_edit_history_empty_about" = "Only edits made after this feature was turned on are saved.";
 "lng_fenix_edit_history_current" = "Current version";
 "lng_fenix_saved_history_clear" = "Clear saved history";
 "lng_fenix_saved_history_clear_sure" = "Forget the deleted messages and edit history this device saved for this account?\n\nThis action cannot be undone.";

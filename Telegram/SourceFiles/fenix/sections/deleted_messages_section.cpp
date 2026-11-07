@@ -505,7 +505,9 @@ void Widget::setupTopBar() {
 
 	_title->setAttribute(Qt::WA_TransparentForMouseEvents);
 	_subtitle->setAttribute(Qt::WA_TransparentForMouseEvents);
-	_subtitle->setText(_peer->name());
+	_subtitle->setText(_peer->isSelf()
+		? tr::lng_saved_messages(tr::now)
+		: _peer->name());
 
 	_back->setClickedCallback([=] {
 		controller()->showBackFromStack();

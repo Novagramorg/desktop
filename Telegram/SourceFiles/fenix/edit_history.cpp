@@ -3,6 +3,11 @@ This file is part of Novagram Desktop, a fork of Telegram Desktop by Vipads LLC.
 */
 #include "fenix/edit_history.h"
 
+#include "fenix/fenix_settings.h"
+#include "history/history.h"
+#include "history/history_item.h"
+#include "history/history_item_components.h"
+
 #include <QtCore/QDataStream>
 
 namespace Fenix {
@@ -236,6 +241,15 @@ void EditHistory::save() {
 		}
 	}
 	_file.write(payload);
+}
+
+bool HasEditHistoryAction(not_null<HistoryItem*> item) {
+	if (!IsServerMsgId(item->id) || item->out()) {
+		return false;
+	}
+	const auto history = item->history();
+	return GetEdits(&history->session()).has(history->peer->id, item->id)
+		|| (Get().saveEditHistory() && item->Has<HistoryMessageEdited>());
 }
 
 } // namespace Fenix

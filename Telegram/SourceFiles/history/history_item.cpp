@@ -2434,14 +2434,16 @@ void HistoryItem::applyEdition(HistoryMessageEdition &&edition) {
 	}
 
 	// Novagram: remember the text this message had before the edit, so the
-	// user can review its full edit history. (Matches Android pro EditMessage.)
+	// user can review its full edit history. Only of others' messages: the
+	// user knows what they wrote themselves.
 	if (Fenix::Get().saveEditHistory()
 		&& edition.editDate != -1
 		&& IsServerMsgId(id)
+		&& !out()
 		&& !isLocalUpdateMedia()) {
+		// An empty one too: a caption added to a photo, as on Android.
 		const auto &previous = originalText();
-		if (!previous.text.isEmpty()
-			&& previous.text != edition.textWithEntities.text) {
+		if (previous.text != edition.textWithEntities.text) {
 			const auto edited = Get<HistoryMessageEdited>();
 			Fenix::GetEdits(&_history->session()).recordEdit(
 				_history->peer->id,

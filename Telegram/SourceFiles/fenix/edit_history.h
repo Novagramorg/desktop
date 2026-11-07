@@ -15,6 +15,8 @@ One store per account, see fenix/saved_history.h.
 #include <map>
 #include <vector>
 
+class HistoryItem;
+
 namespace Fenix {
 
 class EditHistory final {
@@ -60,5 +62,11 @@ private:
 };
 
 [[nodiscard]] EditHistory &GetEdits(not_null<Main::Session*> session);
+
+// The message's menu has "Edit history": on others' messages, when their
+// earlier versions are saved, and, as on Android, on every edited one while
+// edits are saved (its screen explains an empty list). The user's own edits
+// are not saved.
+[[nodiscard]] bool HasEditHistoryAction(not_null<HistoryItem*> item);
 
 } // namespace Fenix
