@@ -133,6 +133,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "dialogs/ui/dialogs_video_userpic.h"
 #include "styles/style_chat.h"
 #include "styles/style_menu_icons.h"
+#include "styles/style_fenix.h"
 
 #include <QtGui/QClipboard>
 #include <QtWidgets/QApplication>
@@ -3075,7 +3076,7 @@ void HistoryInner::showContextMenu(QContextMenuEvent *e, bool showFromTouch) {
 				controller,
 				[=] {
 					Fenix::ShowEditHistory(controller, peer, msgId);
-				}), &st::menuIconInfo);
+				}), &st::novagramMenuIconEditHistory);
 		}
 		if (session->factchecks().canEdit(item)) {
 			const auto text = item->factcheckText();

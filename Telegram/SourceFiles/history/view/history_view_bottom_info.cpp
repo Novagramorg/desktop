@@ -155,6 +155,7 @@ int BottomInfo::firstLineWidth() const {
 
 bool BottomInfo::isWide() const {
 	return (_data.flags & Data::Flag::Edited)
+		|| !_data.fenixDeletedBy.isEmpty() // Novagram: "Deleted" mark.
 		|| _data.scheduleRepeatPeriod
 		|| !_data.author.isEmpty()
 		|| !_views.isEmpty()
@@ -486,16 +487,18 @@ void BottomInfo::layout() {
 }
 
 void BottomInfo::layoutDateText() {
-	// Novagram: prepend "Deleted: by X • " when SaveDeletedMsg preserved the item.
-	const auto deletedPrefix = !_data.fenixDeletedBy.isEmpty()
-		? (_data.fenixDeletedBy + u" • "_q)
-		: QString();
-	const auto updated = (_data.flags & Data::Flag::Updated);
-	const auto editedPrimary = !updated
+	// Novagram: a message kept by Save Deleted Messages says "Deleted"
+	// before its time, in place of "edited", as on Android.
+	const auto deleted = !_data.fenixDeletedBy.isEmpty();
+	const auto updated = !deleted && (_data.flags & Data::Flag::Updated);
+	const auto editedPrimary = !deleted
+		&& !updated
 		&& (_data.flags & Data::Flag::EditedPrimary)
 		&& !(_data.flags & Data::Flag::ForwardedDate);
 	const auto edited = editedPrimary
 		? QString()
+		: deleted
+		? (_data.fenixDeletedBy + ' ')
 		: updated
 		? (tr::lng_ephemeral_updated(tr::now) + ' ')
 		: (_data.flags & Data::Flag::Edited)
@@ -529,7 +532,7 @@ void BottomInfo::layoutDateText() {
 		: name.isEmpty()
 		? date
 		: (name + afterAuthor);
-	const auto full = deletedPrefix + datePart;
+	const auto full = datePart;
 	auto helper = Ui::Text::CustomEmojiHelper(
 		Core::TextContext({ .session = &_reactionsOwner->session() }));
 	auto marked = TextWithEntities();

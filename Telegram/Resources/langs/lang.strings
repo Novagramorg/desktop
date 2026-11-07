@@ -9316,9 +9316,9 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 "lng_fenix_stranger_shield_about" = "Hides chats from people who aren't in your contacts and mutes them — they move to your Archive, where you can still read and reply. Telegram's official chats are never hidden.";
 "lng_fenix_save_deleted_msg" = "Save Deleted Messages";
 "lng_fenix_save_deleted_msg_about" = "Keep messages deleted by others visible with a 'deleted by' label. Your own deletions are still removed.";
-"lng_fenix_deleted_by_other" = "Deleted: by sender";
-"lng_fenix_deleted_by_me" = "Deleted: by me";
-"lng_fenix_deleted_by_channel" = "Deleted: by channel";
+"lng_fenix_deleted_by_other" = "Deleted";
+"lng_fenix_deleted_by_me" = "Deleted by me";
+"lng_fenix_deleted_by_channel" = "Deleted by channel";
 "lng_fenix_save_edit_history" = "Save Edit History";
 "lng_fenix_save_edit_history_about" = "Keep previous versions of edited messages, so you can see what a message said before it was changed.";
 "lng_fenix_edit_history" = "Edit History";

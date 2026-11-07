@@ -7,6 +7,9 @@ using "settings/settings.style";
 using "info/info.style";
 using "ui/chat/chat.style";
 
+// A message's menu: its edit history (a clock with a pen, as Android's).
+novagramMenuIconEditHistory: icon {{ "menu/edited_status", menuIconColor }};
+
 // Settings > Novagram > About: the header.
 novagramAboutLogoTop: 24px;
 novagramAboutLogoSize: 96px;
