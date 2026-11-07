@@ -7,6 +7,7 @@ This file is part of Novagram Desktop, a fork of Telegram Desktop by Vipads LLC.
 #include "data/data_session.h"
 #include "fenix/deleted_msg.h"
 #include "fenix/edit_history.h"
+#include "fenix/kept_messages.h"
 #include "history/history.h"
 #include "history/history_item.h"
 #include "main/main_account.h"
@@ -17,6 +18,7 @@ This file is part of Novagram Desktop, a fork of Telegram Desktop by Vipads LLC.
 #include "storage/serialize_common.h"
 #include "storage/storage_account.h"
 
+#include <QtCore/QDir>
 #include <QtCore/QFile>
 #include <QtCore/QFileInfo>
 #include <QtCore/QJsonArray>
@@ -31,11 +33,13 @@ constexpr auto kFormat = quint32(1);
 struct Stores {
 	explicit Stores(not_null<Main::Session*> session)
 	: deleted(session)
-	, edits(session) {
+	, edits(session)
+	, kept(session) {
 	}
 
 	DeletedMsg deleted;
 	EditHistory edits;
+	KeptMessages kept;
 };
 
 using Registry = base::flat_map<
@@ -70,6 +74,11 @@ void MigrateLegacy(not_null<Main::Session*> current);
 
 	MigrateLegacy(session);
 	return *result;
+}
+
+[[nodiscard]] QString SessionBasePath(not_null<Main::Session*> session) {
+	// Next to the account's cache database: Clear cache leaves it alone.
+	return QFileInfo(session->local().cachePath()).absolutePath() + '/';
 }
 
 [[nodiscard]] QString LegacyPath(const QString &name) {
@@ -176,8 +185,7 @@ void MigrateLegacy(not_null<Main::Session*> current) {
 SessionFile::SessionFile(
 	not_null<Main::Session*> session,
 	const QString &name)
-// Next to the account's cache database: Clear cache leaves it alone.
-: _basePath(QFileInfo(session->local().cachePath()).absolutePath() + '/')
+: _basePath(SessionBasePath(session))
 , _name(name)
 // The account's own local key, the one its other files are encrypted with.
 , _key(session->local().peekLegacyLocalKey())
@@ -224,12 +232,30 @@ void SessionFile::remove() const {
 	}
 }
 
+void RemoveSessionFiles(
+		not_null<Main::Session*> session,
+		const QString &prefix) {
+	// A write still queued would bring a file back after its removal.
+	Storage::details::Sync();
+	const auto base = SessionBasePath(session);
+	const auto names = QDir(base).entryList(
+		{ prefix + u"*"_q },
+		QDir::Files);
+	for (const auto &name : names) {
+		QFile::remove(base + name);
+	}
+}
+
 DeletedMsg &GetDeleted(not_null<Main::Session*> session) {
 	return Resolve(session).deleted;
 }
 
 EditHistory &GetEdits(not_null<Main::Session*> session) {
 	return Resolve(session).edits;
+}
+
+KeptMessages &GetKept(not_null<Main::Session*> session) {
+	return Resolve(session).kept;
 }
 
 void RememberOwnDeletion(
@@ -240,7 +266,86 @@ void RememberOwnDeletion(
 	stores.deleted.markOwnDeletion(peerId, ids);
 	for (const auto &id : ids) {
 		stores.edits.forget(peerId, MsgId(id.v));
+		stores.kept.forget(peerId, MsgId(id.v));
 	}
+}
+
+void ForgetSavedChat(not_null<History*> history) {
+	auto &stores = Resolve(&history->session());
+	const auto peerId = history->peer->id;
+	stores.deleted.forgetChat(peerId);
+	stores.edits.forgetChat(peerId);
+	stores.kept.forgetChat(peerId);
+}
+
+void ForgetSavedBetween(
+		not_null<History*> history,
+		TimeId minDate,
+		TimeId maxDate) {
+	auto &stores = Resolve(&history->session());
+	const auto peerId = history->peer->id;
+	const auto ids = stores.kept.forgetBetween(peerId, minDate, maxDate);
+	for (const auto id : ids) {
+		stores.deleted.forget(peerId, id);
+	}
+}
+
+namespace {
+
+// The kept messages are gone from the server already: their items go from
+// the chat now too, as they would have without Save Deleted Messages.
+void DestroyKeptItems(
+		not_null<History*> history,
+		const std::vector<MsgId> &ids) {
+	auto &data = history->owner();
+
+	// An id can come both from the copies and the marks: each item once.
+	auto unique = base::flat_set<not_null<HistoryItem*>>();
+	for (const auto id : ids) {
+		if (const auto item = data.message(history->peer, id)) {
+			unique.emplace(item);
+		}
+	}
+	if (unique.empty()) {
+		return;
+	}
+	const auto items = std::vector<not_null<HistoryItem*>>(
+		begin(unique),
+		end(unique));
+	data.notifyItemsAboutToBeDestroyed(items);
+	for (const auto &item : items) {
+		item->destroy();
+	}
+	if (!history->chatListMessageKnown()) {
+		history->requestChatListMessage();
+	}
+}
+
+} // namespace
+
+void ForgetKeptMessage(not_null<History*> history, MsgId msgId) {
+	auto &stores = Resolve(&history->session());
+	const auto peerId = history->peer->id;
+	stores.kept.forget(peerId, msgId);
+	stores.deleted.forget(peerId, msgId);
+	DestroyKeptItems(history, { msgId });
+}
+
+void ForgetKeptChatMessages(not_null<History*> history) {
+	auto &stores = Resolve(&history->session());
+	const auto peerId = history->peer->id;
+	auto ids = std::vector<MsgId>();
+	for (const auto &kept : stores.kept.list(peerId)) {
+		ids.push_back(kept.id);
+	}
+	for (const auto &id : stores.deleted.all()) {
+		if (id.peer == peerId) {
+			ids.push_back(id.msg);
+		}
+	}
+	stores.kept.forgetChat(peerId);
+	stores.deleted.forgetChat(peerId);
+	DestroyKeptItems(history, ids);
 }
 
 void ClearSavedHistory(not_null<Main::Session*> session) {
@@ -248,6 +353,7 @@ void ClearSavedHistory(not_null<Main::Session*> session) {
 	const auto kept = stores.deleted.all();
 	stores.deleted.clear();
 	stores.edits.clear();
+	stores.kept.clear();
 
 	// The kept messages are gone from the server already: now they go from
 	// the chats too, as they would have without Save Deleted Messages.
@@ -277,12 +383,14 @@ void WipeSavedHistory(not_null<Main::Session*> session) {
 	if (const auto stores = Find(session)) {
 		stores->deleted.wipe();
 		stores->edits.wipe();
+		stores->kept.wipe();
 	}
 
 	// A write still queued would bring a file back after its removal.
 	Storage::details::Sync();
 	SessionFile(session, QString::fromLatin1(kDeletedFileName)).remove();
 	SessionFile(session, QString::fromLatin1(kEditsFileName)).remove();
+	RemoveSessionFiles(session, QString::fromLatin1(kKeptFilePrefix));
 }
 
 } // namespace Fenix

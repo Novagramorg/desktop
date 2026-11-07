@@ -78,6 +78,21 @@ void DeletedMsg::forget(PeerId peerId, MsgId msgId) {
 	}
 }
 
+void DeletedMsg::forgetChat(PeerId peerId) {
+	auto removed = false;
+	for (auto i = begin(_records); i != end(_records);) {
+		if (i->first.peer == peerId) {
+			i = _records.erase(i);
+			removed = true;
+		} else {
+			++i;
+		}
+	}
+	if (removed) {
+		saveDelayed();
+	}
+}
+
 void DeletedMsg::clear() {
 	if (_wiped) {
 		return;

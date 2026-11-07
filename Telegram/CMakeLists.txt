@@ -982,6 +982,8 @@ PRIVATE
     fenix/fenix_lang.h
     fenix/join_requests_box.cpp
     fenix/join_requests_box.h
+    fenix/kept_messages.cpp
+    fenix/kept_messages.h
     fenix/join_all_accounts.cpp
     fenix/join_all_accounts.h
     fenix/auto_translate.cpp
@@ -1037,6 +1039,8 @@ PRIVATE
     fenix/sections/settings_fenix.h
     fenix/sections/edit_history_section.cpp
     fenix/sections/edit_history_section.h
+    fenix/sections/deleted_messages_section.cpp
+    fenix/sections/deleted_messages_section.h
     history/admin_log/history_admin_log_filter.cpp
     history/admin_log/history_admin_log_filter.h
     history/admin_log/history_admin_log_inner.cpp

@@ -49,6 +49,10 @@ namespace HistoryView {
 class Element;
 } // namespace HistoryView
 
+namespace Fenix {
+class KeptHistory;
+} // namespace Fenix
+
 enum class NewMessageType {
 	Unread,
 	Last,
@@ -569,6 +573,7 @@ private:
 	void applyStreamedDraftFinish(not_null<HistoryItem*> item);
 
 	friend class Data::SponsoredMessages;
+	friend class Fenix::KeptHistory; // Novagram: puts kept messages back.
 	not_null<HistoryItem*> addNewInTheMiddle(
 		not_null<HistoryItem*> item,
 		int blockIndex,

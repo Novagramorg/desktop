@@ -70,6 +70,8 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "fenix/chat_lock.h"
 #include "fenix/chat_lock_box.h"
 #include "fenix/join_all_accounts.h"
+#include "fenix/kept_messages.h"
+#include "fenix/sections/deleted_messages_section.h"
 #include "fenix/join_requests_box.h"
 #include "main/main_domain.h"
 #include "main/main_account.h"
@@ -355,6 +357,7 @@ private:
 	void addFenixJoinRequests();
 	void addFenixChatId();
 	void addFenixFirstMessage();
+	void addFenixDeletedMessages();
 	void addFenixChatLock();
 	void addReport();
 	void addNewContact();
@@ -1261,6 +1264,23 @@ void Filler::addFenixChatPreview() {
 		}, controller->lifetime());
 		controller->showPeerHistory(peer);
 	}, &st::menuIconStealth);
+}
+
+void Filler::addFenixDeletedMessages() {
+	// The messages others deleted in this chat, kept on this device: also
+	// the ones that no longer show in it.
+	if (!_peer || _topic || _sublist) {
+		return;
+	}
+	const auto peer = _peer;
+	if (!Fenix::Get().saveDeletedMsg()
+		&& Fenix::GetKept(&peer->session()).list(peer->id).empty()) {
+		return;
+	}
+	const auto controller = _controller;
+	_addAction(tr::lng_fenix_deleted_messages(tr::now), [=] {
+		Fenix::ShowDeletedMessages(controller, peer);
+	}, &st::menuIconDelete);
 }
 
 void Filler::addFenixChatId() {
@@ -2245,6 +2265,7 @@ void Filler::fillHistoryActions() {
 	addFenixJoinAllAccounts();
 	addFenixJoinRequests();
 	addFenixFirstMessage();
+	addFenixDeletedMessages();
 	addFenixChatId();
 	addFenixChatLock();
 	addReport();

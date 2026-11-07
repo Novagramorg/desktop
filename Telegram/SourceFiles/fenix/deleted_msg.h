@@ -31,6 +31,7 @@ public:
 		MsgId msgId) const;
 	[[nodiscard]] std::vector<FullMsgId> all() const;
 	void forget(PeerId peerId, MsgId msgId);
+	void forgetChat(PeerId peerId);
 	void clear();
 
 	// The user is deleting these messages: when the server reports them

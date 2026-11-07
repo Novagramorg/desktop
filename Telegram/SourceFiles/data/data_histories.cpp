@@ -979,6 +979,8 @@ void Histories::deleteMessagesByDates(
 	TimeId minDate,
 	TimeId maxDate,
 	bool revoke) {
+	// Novagram: the user deletes these days, so their kept copies go too.
+	Fenix::ForgetSavedBetween(history, minDate, maxDate);
 	sendRequest(history, RequestType::Delete, [=](Fn<void()> finish) {
 		const auto peer = history->peer;
 		using Flag = MTPmessages_DeleteHistory::Flag;

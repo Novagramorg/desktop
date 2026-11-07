@@ -26,6 +26,9 @@ namespace Fenix {
 inline constexpr auto kDeletedFileName = "novagram_deleted";
 inline constexpr auto kEditsFileName = "novagram_edits";
 
+// The full copies of kept messages, one file per chat, see kept_messages.h.
+inline constexpr auto kKeptFilePrefix = "novagram_kept_";
+
 // One encrypted file of an account's saved history.
 class SessionFile final {
 public:
@@ -45,11 +48,34 @@ private:
 
 };
 
+// Removes all the account's files whose names start with the prefix.
+void RemoveSessionFiles(
+	not_null<Main::Session*> session,
+	const QString &prefix);
+
 // The user deletes these messages of the history themselves: a server
-// delete of them is not kept, and their saved edit history is forgotten.
+// delete of them is not kept, and their saved copies and edit history are
+// forgotten.
 void RememberOwnDeletion(
 	not_null<History*> history,
 	const QVector<MTPint> &ids);
+
+// The user clears or deletes the chat themselves: all its saved history is
+// forgotten, so nothing of it comes back. Not for unloading the history.
+void ForgetSavedChat(not_null<History*> history);
+
+// The user deletes the chat's messages of these days themselves.
+void ForgetSavedBetween(
+	not_null<History*> history,
+	TimeId minDate,
+	TimeId maxDate);
+
+// Deletes a kept message for good: its copy, its mark and its item.
+void ForgetKeptMessage(not_null<History*> history, MsgId msgId);
+
+// "Clear all" of the chat's Deleted messages: all its kept messages go,
+// from the chat too.
+void ForgetKeptChatMessages(not_null<History*> history);
 
 // "Clear saved history": forgets the account's kept deleted messages,
 // taking them out of the chats, and its saved edit history.

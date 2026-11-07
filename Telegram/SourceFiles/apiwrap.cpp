@@ -80,6 +80,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "mtproto/mtproto_config.h"
 #include "history/history.h"
 #include "fenix/chat_preview_state.h"
+#include "fenix/kept_messages.h"
 #include "history/history_item_components.h"
 #include "history/history_item_helpers.h"
 #include "history/view/controls/history_view_forward_panel.h"
@@ -2292,6 +2293,13 @@ void ApiWrap::deleteHistory(
 			revoke);
 	}
 	if (!justClear) {
+		// Novagram: the user deletes or leaves the chat, so nothing of its
+		// saved history comes back, also for a group upgraded from an old
+		// one (a channel's history is only unloaded, see History::clear).
+		Fenix::ForgetSavedChat(history);
+		if (const auto migrated = peer->migrateFrom()) {
+			Fenix::ForgetSavedChat(_session->data().history(migrated));
+		}
 		_session->data().deleteConversationLocally(peer);
 	} else if (history) {
 		history->clear(History::ClearType::ClearHistory);
@@ -3664,6 +3672,14 @@ void ApiWrap::requestHistory(
 				messageId,
 				slice,
 				result);
+
+			// Novagram: messages deleted by others take their places again.
+			Fenix::KeptHistory::AddToSlice(
+				history,
+				parsed.messageIds,
+				parsed.noSkipRange,
+				&parsed.fullCount);
+
 			history->messages().addSlice(
 				std::move(parsed.messageIds),
 				parsed.noSkipRange,

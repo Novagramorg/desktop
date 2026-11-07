@@ -35,6 +35,7 @@ public:
 		MsgId msgId) const;
 	[[nodiscard]] bool has(PeerId peerId, MsgId msgId) const;
 	void forget(PeerId peerId, MsgId msgId);
+	void forgetChat(PeerId peerId);
 	void clear();
 
 	// Versions of the old file shared by all accounts.

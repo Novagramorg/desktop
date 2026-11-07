@@ -7,6 +7,8 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "history/history.h"
 
+#include "fenix/kept_messages.h"
+#include "fenix/saved_history.h"
 #include "history/view/history_view_element.h"
 #include "history/view/history_view_item_preview.h"
 #include "history/view/history_view_translate_tracker.h"
@@ -615,6 +617,10 @@ not_null<HistoryItem*> History::createItem(
 		bool detachExistingItem,
 		bool newMessage) {
 	owner().fillMessagePeers(peer->id, message);
+
+	// Novagram: hold the server data, to keep it if someone deletes it.
+	Fenix::RememberLoaded(&session(), message);
+
 	if (const auto result = owner().message(peer, id)) {
 		if (detachExistingItem) {
 			result->removeMainView(Data::ViewRemovalReason::Detached);
@@ -1902,6 +1908,9 @@ void History::addOlderSlice(const QVector<MTPMessage> &slice) {
 	if (slice.isEmpty()) {
 		_loadedAtTop = true;
 		checkLocalMessages();
+
+		// Novagram: messages deleted by others take their places again.
+		Fenix::KeptHistory::Restore(this);
 		return;
 	}
 	if (const auto newest = maxMsgId()) {
@@ -1924,6 +1933,9 @@ void History::addOlderSlice(const QVector<MTPMessage> &slice) {
 	}
 	checkLocalMessages();
 	checkLastMessage();
+
+	// Novagram: messages deleted by others take their places again.
+	Fenix::KeptHistory::Restore(this);
 }
 
 void History::addCreatedOlderSlice(
@@ -1977,6 +1989,9 @@ void History::addNewerSlice(const QVector<MTPMessage> &slice) {
 
 	checkLocalMessages();
 	checkLastMessage();
+
+	// Novagram: messages deleted by others take their places again.
+	Fenix::KeptHistory::Restore(this);
 }
 
 void History::checkLastMessage() {
@@ -4091,6 +4106,9 @@ Data::HistoryMessages &History::messages() {
 			ranges::sort(list);
 		}
 		if (max || (loadedAtTop() && loadedAtBottom())) {
+			// Novagram: messages deleted by others take their places again.
+			Fenix::KeptHistory::AddToSlice(this, list, { from, till });
+
 			_messages->addSlice(std::move(list), { from, till }, {});
 		}
 	}
@@ -4434,6 +4452,11 @@ std::vector<MsgId> History::collectMessagesFromParticipantToDelete(
 }
 
 void History::clear(ClearType type, bool markEmpty) {
+	if (type != ClearType::Unload) {
+		// Novagram: the user clears or deletes the chat, so nothing of its
+		// saved history comes back.
+		Fenix::ForgetSavedChat(this);
+	}
 	_unreadBarView = nullptr;
 	_firstUnreadView = nullptr;
 	removeJoinedMessage();

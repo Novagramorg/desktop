@@ -4,6 +4,8 @@ This file is part of Novagram Desktop, a fork of Telegram Desktop by Vipads LLC.
 using "ui/basic.style";
 using "ui/widgets/widgets.style";
 using "settings/settings.style";
+using "info/info.style";
+using "ui/chat/chat.style";
 
 // Settings > Novagram > About: the header.
 novagramAboutLogoTop: 24px;
@@ -34,3 +36,23 @@ novagramAboutRow: SettingsButton(settingsButton) {
 novagramAboutValueSkip: 1px;
 novagramAboutValueFont: font(13px);
 novagramAboutValueFg: windowActiveTextFg;
+
+// A chat's "Deleted messages" screen.
+novagramDeletedClear: IconButton(infoTopBarMenu) {
+	icon: icon {{ "menu/delete", boxTitleCloseFg }};
+	iconOver: icon {{ "menu/delete", boxTitleCloseFgOver }};
+	iconPosition: point(-1px, -1px);
+}
+novagramDeletedSubtitle: FlatLabel(defaultFlatLabel) {
+	textFg: windowSubTextFg;
+	maxHeight: 20px;
+	style: TextStyle(defaultTextStyle) {
+		font: font(13px);
+	}
+}
+novagramDeletedNameSkip: 2px;
+novagramDeletedDateSkip: 2px;
+novagramDeletedEmptyWidth: 300px;
+novagramDeletedEmptyPadding: margins(16px, 12px, 16px, 13px);
+novagramDeletedEmptySkip: 4px;
+novagramDeletedEmptyTitleFont: font(14px semibold);

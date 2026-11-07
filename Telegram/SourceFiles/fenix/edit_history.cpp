@@ -88,6 +88,22 @@ void EditHistory::forget(PeerId peerId, MsgId msgId) {
 	saveDelayed();
 }
 
+void EditHistory::forgetChat(PeerId peerId) {
+	auto removed = false;
+	for (auto i = begin(_records); i != end(_records);) {
+		if (i->first.peer == peerId) {
+			_textSize -= TextSize(i->second);
+			i = _records.erase(i);
+			removed = true;
+		} else {
+			++i;
+		}
+	}
+	if (removed) {
+		saveDelayed();
+	}
+}
+
 void EditHistory::clear() {
 	if (_wiped) {
 		return;

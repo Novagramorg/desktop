@@ -9,6 +9,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 
 #include "fenix/fenix_settings.h"
 #include "fenix/deleted_msg.h"
+#include "fenix/kept_messages.h"
 #include "fenix/saved_history.h"
 #include "main/main_session.h"
 #include "main/main_session_settings.h"
@@ -3071,6 +3072,9 @@ bool Session::updateExistingMessage(const MTPDmessage &data) {
 }
 
 void Session::updateEditedMessage(const MTPMessage &data) {
+	// Novagram: a kept copy shows the message as it was last.
+	Fenix::RememberLoaded(_session, data);
+
 	const auto existing = data.match([](const MTPDmessageEmpty &)
 			-> HistoryItem* {
 		return nullptr;
@@ -3379,6 +3383,7 @@ void Session::processMessagesDeleted(
 					peerId,
 					i->second->id,
 					by);
+				Fenix::GetKept(_session).keep(i->second);
 				history->owner().notifyItemDataChange(i->second);
 				history->owner().requestItemRepaint(i->second);
 				continue;
@@ -3415,6 +3420,7 @@ void Session::processNonChannelMessagesDeleted(const QVector<MTPint> &data) {
 					history->peer->id,
 					item->id,
 					Fenix::DeletedBy::Other);
+				Fenix::GetKept(_session).keep(item);
 				history->owner().notifyItemDataChange(item);
 				history->owner().requestItemRepaint(item);
 				continue;
