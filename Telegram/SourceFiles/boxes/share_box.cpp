@@ -35,6 +35,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "menu/menu_send.h"
 #include "history/history.h"
 #include "history/history_item.h"
+#include "fenix/kept_forward.h"
 #include "history/history_item_helpers.h"
 #include "history/view/controls/history_view_forward_panel.h"
 #include "history/view/history_view_element.h"
@@ -1879,8 +1880,15 @@ ShareBox::SubmitCallback ShareBox::DefaultForwardCallback(
 			| (videoTimestamp.has_value()
 				? Flag::f_video_timestamp
 				: Flag(0));
-		const auto ranges = CollectForwardRanges(items);
-		if (ranges.empty()) {
+		// Novagram: the server no longer has the kept deleted messages, so
+		// they go as copies, before the forwarded ones.
+		auto forwarded = items;
+		const auto copies = Fenix::TakeKeptCopies(forwarded);
+		const auto copyCaptions = (forwardOptions
+			!= Data::ForwardOptions::NoNamesAndCaptions);
+
+		const auto ranges = CollectForwardRanges(forwarded);
+		if (ranges.empty() && copies.empty()) {
 			return;
 		}
 		auto &api = history->session().api();
@@ -1914,6 +1922,12 @@ ShareBox::SubmitCallback ShareBox::DefaultForwardCallback(
 				message.textWithTags = comment;
 				message.action.clearDraft = false;
 				api.sendMessage(std::move(message));
+			}
+			for (const auto &item : copies) {
+				Fenix::SendKeptCopy(
+					item,
+					Api::SendAction(effectiveThread, options),
+					copyCaptions);
 			}
 
 			const auto topicRootId = effectiveThread->topicRootId();

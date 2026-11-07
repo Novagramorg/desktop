@@ -80,6 +80,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "mtproto/mtproto_config.h"
 #include "history/history.h"
 #include "fenix/chat_preview_state.h"
+#include "fenix/kept_forward.h"
 #include "fenix/kept_messages.h"
 #include "history/history_item_components.h"
 #include "history/history_item_helpers.h"
@@ -3920,6 +3921,18 @@ void ApiWrap::forwardMessages(
 		SendAction action,
 		FnMut<void()> &&successCallback) {
 	Expects(!draft.items.empty());
+
+	// Novagram: the server no longer has the kept deleted messages, so they
+	// go as copies, each in its place among the forwarded ones.
+	if (Fenix::ForwardWithKeptCopies(
+			draft,
+			action,
+			successCallback,
+			[=](Data::ResolvedForwardDraft &&part, FnMut<void()> &&done) {
+				forwardMessages(std::move(part), action, std::move(done));
+			})) {
+		return;
+	}
 
 	auto &histories = _session->data().histories();
 

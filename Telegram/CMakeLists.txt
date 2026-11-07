@@ -982,6 +982,8 @@ PRIVATE
     fenix/fenix_lang.h
     fenix/join_requests_box.cpp
     fenix/join_requests_box.h
+    fenix/kept_forward.cpp
+    fenix/kept_forward.h
     fenix/kept_messages.cpp
     fenix/kept_messages.h
     fenix/join_all_accounts.cpp
