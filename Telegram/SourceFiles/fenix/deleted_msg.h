@@ -67,8 +67,9 @@ private:
 [[nodiscard]] DeletedMsg &GetDeleted(not_null<Main::Session*> session);
 
 // Whether a message the server reports deleted stays in the chat: not when
-// the user deleted it from this app, its auto-delete timer ran out, or it
-// is a service message, which has no place for the "deleted" mark.
+// it is the user's own, the user deleted it from this app, its auto-delete
+// timer ran out, or it is a service message, which has no place for the
+// "deleted" mark.
 [[nodiscard]] bool KeepDeleted(not_null<HistoryItem*> item);
 
 } // namespace Fenix

@@ -249,7 +249,10 @@ void DeletedMsg::save() {
 }
 
 bool KeepDeleted(not_null<HistoryItem*> item) {
+	// The user's own messages are not kept: the server doesn't say who
+	// deleted one, and it is nearly always the user, on another device.
 	if (!IsServerMsgId(item->id)
+		|| item->out()
 		|| item->isService()
 		|| item->isEphemeral()) {
 		return false;
