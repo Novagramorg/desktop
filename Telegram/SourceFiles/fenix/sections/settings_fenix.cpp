@@ -20,6 +20,7 @@ This file is part of Novagram Desktop, a fork of Telegram Desktop by Vipads LLC.
 #include "ui/widgets/fields/password_input.h"
 #include "ui/widgets/labels.h"
 #include "ui/rp_widget.h"
+#include "ui/text/format_values.h"
 #include "ui/ui_utility.h"
 #include "settings/settings_builder.h"
 #include "styles/style_boxes.h"
@@ -131,13 +132,20 @@ void BuildMessagesRows(SectionBuilder &builder) {
 		[](bool value) { Fenix::Get().setSaveEditHistory(value); },
 		Fenix::Get().saveEditHistoryValue());
 
-	AddAction(
-		builder,
-		u"clear_saved_history"_q,
-		tr::lng_fenix_saved_history_clear(),
-		&st::menuIconClear,
-		{ u"clear"_q, u"deleted"_q, u"edit"_q, u"history"_q },
-		[=] {
+	// The size of the account's saved history on its row, as on Android,
+	// measured again once it is cleared.
+	const auto cleared = std::make_shared<rpl::event_stream<>>();
+	const auto id = ControlId(u"clear_saved_history"_q);
+	const auto button = builder.addButton({
+		.id = id,
+		.title = tr::lng_fenix_saved_history_clear(),
+		.icon = { &st::menuIconClear },
+		.label = rpl::single(rpl::empty) | rpl::then(
+			cleared->events()
+		) | rpl::map([=] {
+			return Ui::FormatSizeText(Fenix::SavedHistorySize(session));
+		}),
+		.onClick = [=] {
 			if (!controller) {
 				return;
 			}
@@ -145,6 +153,7 @@ void BuildMessagesRows(SectionBuilder &builder) {
 				.text = tr::lng_fenix_saved_history_clear_sure(),
 				.confirmed = [=](Fn<void()> close) {
 					Fenix::ClearSavedHistory(session);
+					cleared->fire({});
 					controller->showToast(
 						tr::lng_fenix_saved_history_cleared(tr::now));
 					close();
@@ -152,7 +161,12 @@ void BuildMessagesRows(SectionBuilder &builder) {
 				.confirmText = tr::lng_local_storage_clear_some(),
 				.confirmStyle = &st::attentionBoxButton,
 			}));
-		});
+		},
+		.keywords = { u"clear"_q, u"deleted"_q, u"edit"_q, u"history"_q },
+	});
+	if (button && controller) {
+		Fenix::SetupCopyDeepLink(button, controller, FenixId(), id);
+	}
 
 	builder.addSkip();
 	builder.addDivider();

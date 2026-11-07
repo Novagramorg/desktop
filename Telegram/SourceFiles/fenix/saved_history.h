@@ -81,6 +81,10 @@ void ForgetKeptChatMessages(not_null<History*> history);
 // taking them out of the chats, and its saved edit history.
 void ClearSavedHistory(not_null<Main::Session*> session);
 
+// How much the account's saved history takes on the disk, for its row in
+// the settings (Android shows it there too).
+[[nodiscard]] int64 SavedHistorySize(not_null<Main::Session*> session);
+
 // The account logs out: its saved history is removed from the disk.
 void WipeSavedHistory(not_null<Main::Session*> session);
 

@@ -379,6 +379,21 @@ void ClearSavedHistory(not_null<Main::Session*> session) {
 	}
 }
 
+int64 SavedHistorySize(not_null<Main::Session*> session) {
+	// The writes still queued count too.
+	Storage::details::Sync();
+	const auto files = QDir(SessionBasePath(session)).entryInfoList({
+		QString::fromLatin1(kDeletedFileName) + u"*"_q,
+		QString::fromLatin1(kEditsFileName) + u"*"_q,
+		QString::fromLatin1(kKeptFilePrefix) + u"*"_q,
+	}, QDir::Files);
+	auto result = int64();
+	for (const auto &file : files) {
+		result += file.size();
+	}
+	return result;
+}
+
 void WipeSavedHistory(not_null<Main::Session*> session) {
 	if (const auto stores = Find(session)) {
 		stores->deleted.wipe();
