@@ -40,6 +40,10 @@ public:
 	// otherwise the common one). False when the chat has no passcode at all.
 	[[nodiscard]] bool check(PeerId peerId, const QString &input) const;
 
+	// Verify [input] against the common passcode alone. False when there is
+	// no common passcode.
+	[[nodiscard]] bool checkCommon(const QString &input) const;
+
 	// Mutations.
 	void changeCommonPassword(const QString &passcode);
 	void addCommonLock(PeerId peerId);

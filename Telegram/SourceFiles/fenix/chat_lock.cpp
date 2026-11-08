@@ -66,6 +66,10 @@ bool ChatLock::check(PeerId peerId, const QString &input) const {
 	return !hash.isEmpty() && (Hash(input) == hash);
 }
 
+bool ChatLock::checkCommon(const QString &input) const {
+	return !_commonHash.isEmpty() && (Hash(input) == _commonHash);
+}
+
 void ChatLock::changeCommonPassword(const QString &passcode) {
 	_commonHash = Hash(passcode);
 	save();

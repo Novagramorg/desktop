@@ -188,11 +188,34 @@ void ChatLockCommonPasswordBox(
 		Fn<void()> onDone) {
 	box->setTitle(tr::lng_fenix_chat_lock_change_common());
 
-	const auto enter = AddPasswordRow(box, tr::lng_fenix_chat_lock_enter());
-	const auto confirm = AddPasswordRow(box, tr::lng_fenix_chat_lock_confirm());
-	box->setFocusCallback([=] { enter->setFocusFast(); });
+	// The common passcode opens every chat on it, so a new one needs the
+	// current one first: else anyone at the computer could set their own
+	// from the settings and open those chats with it.
+	const auto changing = GetChatLock().hasCommonPassword();
+	const auto current = changing
+		? AddPasswordRow(box, tr::lng_passcode_enter_old()).get()
+		: nullptr;
+	const auto enter = AddPasswordRow(box, changing
+		? tr::lng_passcode_enter_new()
+		: tr::lng_fenix_chat_lock_enter());
+	const auto confirm = AddPasswordRow(box, changing
+		? tr::lng_passcode_confirm_new()
+		: tr::lng_fenix_chat_lock_confirm());
+	box->setFocusCallback([=] {
+		if (current) {
+			current->setFocusFast();
+		} else {
+			enter->setFocusFast();
+		}
+	});
 
 	const auto save = [=] {
+		if (current && !GetChatLock().checkCommon(current->getLastText())) {
+			current->showError();
+			current->setText(QString());
+			current->setFocusFast();
+			return;
+		}
 		const auto first = enter->getLastText();
 		const auto second = confirm->getLastText();
 		if (first.isEmpty()) {
@@ -212,6 +235,13 @@ void ChatLockCommonPasswordBox(
 		}
 		box->closeBox();
 	};
+	if (current) {
+		QObject::connect(
+			current,
+			&Ui::MaskedInputField::submitted,
+			current,
+			[=](Qt::KeyboardModifiers) { enter->setFocusFast(); });
+	}
 	QObject::connect(
 		enter,
 		&Ui::MaskedInputField::submitted,

@@ -48,7 +48,8 @@ void ChatLockCreateBox(
 	Fn<void()> onDone);
 
 // Change the shared/common passcode itself (not tied to locking a chat). Every
-// chat on the common passcode immediately uses the new one. [onDone] runs after.
+// chat on the common passcode immediately uses the new one. When there is one
+// already, it is asked for first. [onDone] runs after.
 void ChatLockCommonPasswordBox(
 	not_null<Ui::GenericBox*> box,
 	Fn<void()> onDone);
