@@ -359,6 +359,8 @@ private:
 	void addFenixFirstMessage();
 	void addFenixDeletedMessages();
 	void addFenixChatLock();
+	void addFenixSubmenu();
+	void fillFenixActions();
 	void addReport();
 	void addNewContact();
 	void addShareContact();
@@ -1403,6 +1405,41 @@ void Filler::addFenixChatLock() {
 	}
 }
 
+void Filler::fillFenixActions() {
+	addFenixAutoTranslate();
+	addFenixOneTimeVoice();
+	addFenixTextStyle();
+	addFenixAutoText();
+	addFenixJoinAllAccounts();
+	addFenixJoinRequests();
+	addFenixDeletedMessages();
+	addFenixChatLock();
+}
+
+void Filler::addFenixSubmenu() {
+	// Novagram's tools for the chat go in one submenu, so they don't crowd
+	// Telegram's own items. A single one goes in the menu itself. The chat ID
+	// and the jump to the first message stay outside it.
+	auto test = Ui::PopupMenu(nullptr);
+	const auto testCallback = Ui::Menu::CreateAddActionCallback(&test);
+	Filler(_controller, _request, testCallback).fillFenixActions();
+	if (test.actions().size() < 2) {
+		fillFenixActions();
+		return;
+	}
+	const auto controller = _controller;
+	const auto request = _request;
+	_addAction(PeerMenuCallback::Args{
+		.text = tr::lng_fenix_features(tr::now),
+		.handler = nullptr,
+		.icon = &st::menuIconShowInFolder,
+		.fillSubmenu = [=](not_null<Ui::PopupMenu*> menu) {
+			const auto callback = Ui::Menu::CreateAddActionCallback(menu);
+			Filler(controller, request, callback).fillFenixActions();
+		},
+	});
+}
+
 void Filler::addReport() {
 	const auto chat = _peer->asChat();
 	const auto channel = _peer->asChannel();
@@ -2258,16 +2295,9 @@ void Filler::fillHistoryActions() {
 	addDirectMessages();
 	addExportChat();
 	addTranslate();
-	addFenixAutoTranslate();
-	addFenixOneTimeVoice();
-	addFenixTextStyle();
-	addFenixAutoText();
-	addFenixJoinAllAccounts();
-	addFenixJoinRequests();
+	addFenixSubmenu();
 	addFenixFirstMessage();
-	addFenixDeletedMessages();
 	addFenixChatId();
-	addFenixChatLock();
 	addReport();
 	addClearHistory();
 	addDeleteChat();
