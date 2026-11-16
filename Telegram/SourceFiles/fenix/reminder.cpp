@@ -30,19 +30,36 @@ namespace {
 // As long as the Android reminder rings, so it is hard to miss.
 constexpr auto kRingDuration = crl::time(8000);
 
-// The system's alarm sound, as Android's alarm tone. Without one, Telegram's
-// ringtone, the loudest sound it has.
-[[nodiscard]] QString AlarmSoundPath() {
+// Telegram's own ringtone: always there, and the loudest sound it has.
+[[nodiscard]] QString RingtonePath() {
+	return Core::App().settings().getSoundPath(u"call_incoming"_q);
+}
+
+// One of the system's alarm sounds, empty when the system has none.
+[[nodiscard]] QString SystemAlarmPath(const QString &name) {
 #ifdef Q_OS_WIN
 	const auto root = qEnvironmentVariable("SystemRoot");
 	if (!root.isEmpty()) {
-		const auto path = root + u"/Media/Alarm01.wav"_q;
+		const auto path = root + u"/Media/"_q + name;
 		if (QFile::exists(path)) {
 			return path;
 		}
 	}
 #endif // Q_OS_WIN
-	return Core::App().settings().getSoundPath(u"call_incoming"_q);
+	return QString();
+}
+
+// The alarm tone is the system's alarm sound, as on Android. The signal tone
+// is its beeping one. Without them, the ringtone.
+[[nodiscard]] QString SoundPath(ReminderSound sound) {
+	auto result = QString();
+	if (sound == ReminderSound::Signal) {
+		result = SystemAlarmPath(u"Alarm02.wav"_q);
+	}
+	if (result.isEmpty() && sound != ReminderSound::Ringtone) {
+		result = SystemAlarmPath(u"Alarm01.wav"_q);
+	}
+	return result.isEmpty() ? RingtonePath() : result;
 }
 
 // The notification tone is the chat's notification sound, or the default one
@@ -51,8 +68,8 @@ constexpr auto kRingDuration = crl::time(8000);
 		not_null<Data::Session*> owner,
 		History *history,
 		ReminderSound sound) {
-	if (sound == ReminderSound::Alarm) {
-		auto file = QFile(AlarmSoundPath());
+	if (sound != ReminderSound::Notification) {
+		auto file = QFile(SoundPath(sound));
 		return file.open(QIODevice::ReadOnly) ? file.readAll() : QByteArray();
 	}
 	auto &notifications = Core::App().notifications();
@@ -205,9 +222,9 @@ bool Reminder::ring(not_null<History*> history) {
 		Media::Player::mixer()->scheduleFaderCallback();
 		_ringTimer.callOnce(kRingDuration);
 	});
-	if (sound == ReminderSound::Alarm) {
-		// An alarm rings as on Android: also when notification sounds are
-		// off or the system is set not to disturb.
+	if (sound != ReminderSound::Notification) {
+		// The alarm-like sounds ring as an alarm does on Android: also when
+		// notification sounds are off or the system is set not to disturb.
 		play();
 	} else {
 		// A notification tone follows the notification sound settings, as

@@ -461,9 +461,10 @@ void Settings::load() {
 		root.value(u"message_reminder_delay"_q).toInt(5),
 		1,
 		59);
-	_messageReminderSound = (root.value(u"message_reminder_sound"_q).toInt(0)
-			== int(ReminderSound::Alarm))
-		? ReminderSound::Alarm
+	const auto reminderSound = root.value(u"message_reminder_sound"_q).toInt(0);
+	_messageReminderSound = (reminderSound >= int(ReminderSound::Notification)
+			&& reminderSound <= int(ReminderSound::Signal))
+		? static_cast<ReminderSound>(reminderSound)
 		: ReminderSound::Notification;
 	_autoAcceptJoin = root.value(u"auto_accept_join"_q).toBool(false);
 	_avatarOpensProfile = root.value(u"avatar_opens_profile"_q).toBool(false);

@@ -9444,6 +9444,8 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 "lng_fenix_reminder_sound" = "Reminder sound";
 "lng_fenix_reminder_sound_notification" = "Notification tone";
 "lng_fenix_reminder_sound_alarm" = "Alarm tone";
+"lng_fenix_reminder_sound_ringtone" = "Ringtone";
+"lng_fenix_reminder_sound_signal" = "Signal tone";
 "lng_fenix_chat_lock_section" = "Chat lock";
 "lng_fenix_chat_lock_change_common" = "Change common password";
 "lng_fenix_chat_lock_changed" = "Common password changed";

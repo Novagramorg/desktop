@@ -4,8 +4,9 @@ This file is part of Novagram Desktop, a fork of Telegram Desktop by Vipads LLC.
 Unread message reminder. Port of the Android org.fenixuz.utils.MessageReminder
 "budilnik": while enabled, if an incoming PRIVATE message stays unread for the
 chosen delay, the message's notification is shown once more, silent, and the
-chosen sound rings for about 8 seconds: the chat's notification sound or the
-system's alarm sound. Reading the chat cancels it, and stops a ring.
+chosen sound rings for about 8 seconds: the chat's notification sound, the
+system's alarm or signal sound, or Telegram's ringtone. Reading the chat
+cancels it, and stops a ring.
 
 Desktop differences from the Android alarm version:
  - No AlarmManager: a base::Timer drives the single fire, so the reminder works

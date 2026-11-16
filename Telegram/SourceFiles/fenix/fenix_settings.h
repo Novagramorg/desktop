@@ -31,6 +31,8 @@ enum class TextStyle {
 enum class ReminderSound {
 	Notification = 0,
 	Alarm = 1,
+	Ringtone = 2,
+	Signal = 3,
 };
 
 class Settings final {

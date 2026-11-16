@@ -412,9 +412,17 @@ void FenixReminderDelayBox(not_null<Ui::GenericBox*> box) {
 }
 
 [[nodiscard]] QString ReminderSoundName(Fenix::ReminderSound sound) {
-	return (sound == Fenix::ReminderSound::Alarm)
-		? tr::lng_fenix_reminder_sound_alarm(tr::now)
-		: tr::lng_fenix_reminder_sound_notification(tr::now);
+	switch (sound) {
+	case Fenix::ReminderSound::Alarm:
+		return tr::lng_fenix_reminder_sound_alarm(tr::now);
+	case Fenix::ReminderSound::Ringtone:
+		return tr::lng_fenix_reminder_sound_ringtone(tr::now);
+	case Fenix::ReminderSound::Signal:
+		return tr::lng_fenix_reminder_sound_signal(tr::now);
+	case Fenix::ReminderSound::Notification:
+		break;
+	}
+	return tr::lng_fenix_reminder_sound_notification(tr::now);
 }
 
 // Chosen like on Android: picking a sound saves it and plays it for a short
@@ -430,7 +438,9 @@ void FenixReminderSoundBox(
 		int(Fenix::Get().messageReminderSound()));
 	for (const auto sound : {
 			Fenix::ReminderSound::Notification,
-			Fenix::ReminderSound::Alarm }) {
+			Fenix::ReminderSound::Alarm,
+			Fenix::ReminderSound::Ringtone,
+			Fenix::ReminderSound::Signal }) {
 		box->addRow(object_ptr<Ui::Radiobutton>(
 			box,
 			group,
