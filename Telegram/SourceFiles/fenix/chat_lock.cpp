@@ -4,6 +4,9 @@ This file is part of Novagram Desktop, a fork of Telegram Desktop by Vipads LLC.
 #include "fenix/chat_lock.h"
 
 #include "settings.h"
+#include "base/bytes.h"
+#include "base/openssl_help.h"
+#include "base/random.h"
 
 #include <QtCore/QCryptographicHash>
 #include <QtCore/QDir>
@@ -20,13 +23,92 @@ namespace {
 	return cWorkingDir() + u"tdata/fenix_chatlock.json"_q;
 }
 
+// Stored format: "pbkdf2-sha512$<iterations>$<salt hex>$<hash hex>".
+// The same KDF and iteration count Telegram uses for the cloud password, so
+// a short PIN can't be brute-forced from fenix_chatlock.json in a moment.
+constexpr auto kKdfPrefix = "pbkdf2-sha512";
+constexpr auto kKdfIterations = 100000;
+constexpr auto kSaltSize = 16;
+constexpr auto kLegacySha256HexSize = 64;
+
+[[nodiscard]] QByteArray ToByteArray(const bytes::vector &value) {
+	return QByteArray(
+		reinterpret_cast<const char*>(value.data()),
+		int(value.size()));
+}
+
+[[nodiscard]] QByteArray Derive(
+		const QString &passcode,
+		const QByteArray &salt,
+		int iterations) {
+	return ToByteArray(openssl::Pbkdf2Sha512(
+		bytes::make_span(passcode.toUtf8()),
+		bytes::make_span(salt),
+		iterations));
+}
+
+// Compares without an early exit, so the time taken doesn't leak how many
+// leading bytes matched.
+[[nodiscard]] bool ConstantTimeEqual(const QByteArray &a, const QByteArray &b) {
+	if (a.size() != b.size()) {
+		return false;
+	}
+	auto diff = 0;
+	for (auto i = 0; i != a.size(); ++i) {
+		diff |= (uchar(a[i]) ^ uchar(b[i]));
+	}
+	return (diff == 0);
+}
+
 [[nodiscard]] QString Hash(const QString &passcode) {
 	if (passcode.isEmpty()) {
 		return QString();
 	}
-	return QString::fromLatin1(QCryptographicHash::hash(
-		passcode.toUtf8(),
-		QCryptographicHash::Sha256).toHex());
+	auto salt = bytes::vector(kSaltSize);
+	base::RandomFill(bytes::make_span(salt));
+	const auto saltBytes = ToByteArray(salt);
+	return u"%1$%2$%3$%4"_q.arg(
+		QString::fromLatin1(kKdfPrefix),
+		QString::number(kKdfIterations),
+		QString::fromLatin1(saltBytes.toHex()),
+		QString::fromLatin1(Derive(
+			passcode,
+			saltBytes,
+			kKdfIterations).toHex()));
+}
+
+[[nodiscard]] bool IsLegacyHash(const QString &stored) {
+	return (stored.size() == kLegacySha256HexSize)
+		&& !stored.contains(QChar('$'));
+}
+
+// Verifies [input] against a stored hash in either the current PBKDF2 format
+// or the old unsalted SHA-256 hex one (from before the format change).
+[[nodiscard]] bool Verify(const QString &stored, const QString &input) {
+	if (stored.isEmpty() || input.isEmpty()) {
+		return false;
+	} else if (IsLegacyHash(stored)) {
+		return ConstantTimeEqual(
+			QCryptographicHash::hash(
+				input.toUtf8(),
+				QCryptographicHash::Sha256).toHex(),
+			stored.toLatin1().toLower());
+	}
+	const auto parts = stored.split(QChar('$'));
+	if (parts.size() != 4 || parts[0] != QString::fromLatin1(kKdfPrefix)) {
+		return false;
+	}
+	auto ok = false;
+	const auto iterations = parts[1].toInt(&ok);
+	if (!ok || iterations <= 0) {
+		return false;
+	}
+	const auto salt = QByteArray::fromHex(parts[2].toLatin1());
+	const auto expected = QByteArray::fromHex(parts[3].toLatin1());
+	if (salt.isEmpty() || expected.isEmpty()) {
+		return false;
+	}
+	return ConstantTimeEqual(Derive(input, salt, iterations), expected);
 }
 
 } // namespace
@@ -61,13 +143,29 @@ QString ChatLock::effectiveHash(PeerId peerId) const {
 	return (i != _individual.end()) ? i->second : _commonHash;
 }
 
-bool ChatLock::check(PeerId peerId, const QString &input) const {
-	const auto hash = effectiveHash(peerId);
-	return !hash.isEmpty() && (Hash(input) == hash);
+bool ChatLock::check(PeerId peerId, const QString &input) {
+	const auto i = _individual.find(peerId);
+	if (i == _individual.end()) {
+		return checkCommon(input);
+	} else if (!Verify(i->second, input)) {
+		return false;
+	} else if (IsLegacyHash(i->second)) {
+		// Re-store the passcode in the salted format now that we know it.
+		i->second = Hash(input);
+		save();
+	}
+	return true;
 }
 
-bool ChatLock::checkCommon(const QString &input) const {
-	return !_commonHash.isEmpty() && (Hash(input) == _commonHash);
+bool ChatLock::checkCommon(const QString &input) {
+	if (!Verify(_commonHash, input)) {
+		return false;
+	} else if (IsLegacyHash(_commonHash)) {
+		// Re-store the passcode in the salted format now that we know it.
+		_commonHash = Hash(input);
+		save();
+	}
+	return true;
 }
 
 void ChatLock::changeCommonPassword(const QString &passcode) {

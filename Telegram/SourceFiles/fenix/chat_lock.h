@@ -12,7 +12,11 @@ gated behind a passcode box (see fenix/chat_lock_box) before its history shows;
 the box verifies against the chat's individual passcode if it has one, otherwise
 against the common passcode.
 
-Passcodes are stored hashed (SHA-256), never in clear text. The locked sets and
+Passcodes are stored as salted PBKDF2-HMAC-SHA512 hashes (100000 iterations),
+never in clear text; hashes in the old unsalted SHA-256 format are still
+accepted and re-stored in the new format on the next correct entry. The lock
+only hides chats in this app's UI: it does not encrypt their data, and anyone
+who can edit the file can remove it. The locked sets and
 the common passcode persist on-device in tdata/fenix_chatlock.json (survive
 logout, no network). The "already unlocked this session" set is transient and
 lives only in memory — it clears on restart, re-prompting next launch.
@@ -38,11 +42,13 @@ public:
 
 	// Verify [input] against the chat's effective passcode (individual if set,
 	// otherwise the common one). False when the chat has no passcode at all.
-	[[nodiscard]] bool check(PeerId peerId, const QString &input) const;
+	// A passcode still stored in the old unsalted SHA-256 format is re-stored
+	// in the salted one when it is entered correctly, hence non-const.
+	[[nodiscard]] bool check(PeerId peerId, const QString &input);
 
 	// Verify [input] against the common passcode alone. False when there is
 	// no common passcode.
-	[[nodiscard]] bool checkCommon(const QString &input) const;
+	[[nodiscard]] bool checkCommon(const QString &input);
 
 	// Mutations.
 	void changeCommonPassword(const QString &passcode);
