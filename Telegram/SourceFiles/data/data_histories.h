@@ -51,6 +51,11 @@ public:
 	[[nodiscard]] Session &owner() const;
 	[[nodiscard]] Main::Session &session() const;
 
+	// Novagram: the unread message reminder of this account.
+	[[nodiscard]] Fenix::Reminder &reminder() {
+		return _reminder;
+	}
+
 	[[nodiscard]] History *find(PeerId peerId);
 	[[nodiscard]] not_null<History*> findOrCreate(PeerId peerId);
 

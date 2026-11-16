@@ -8,9 +8,12 @@ This file is part of Novagram Desktop, a fork of Telegram Desktop by Vipads LLC.
 #include "fenix/chat_lock.h"
 #include "fenix/chat_lock_box.h"
 #include "fenix/message_cache.h"
+#include "fenix/reminder.h"
 #include "fenix/saved_history.h"
 #include "main/main_session.h"
 #include "main/main_session_settings.h"
+#include "media/audio/media_audio_track.h"
+#include "base/timer.h"
 #include "data/data_auto_download.h"
 #include "data/data_session.h"
 #include "data/data_peer.h"
@@ -31,6 +34,7 @@ This file is part of Novagram Desktop, a fork of Telegram Desktop by Vipads LLC.
 #include "settings/sections/settings_main.h"
 #include "ui/vertical_list.h"
 #include "ui/widgets/buttons.h"
+#include "ui/widgets/checkbox.h"
 #include "ui/wrap/vertical_layout.h"
 #include "window/window_session_controller.h"
 #include "styles/style_menu_icons.h"
@@ -407,8 +411,51 @@ void FenixReminderDelayBox(not_null<Ui::GenericBox*> box) {
 	box->addButton(tr::lng_cancel(), [=] { box->closeBox(); });
 }
 
+[[nodiscard]] QString ReminderSoundName(Fenix::ReminderSound sound) {
+	return (sound == Fenix::ReminderSound::Alarm)
+		? tr::lng_fenix_reminder_sound_alarm(tr::now)
+		: tr::lng_fenix_reminder_sound_notification(tr::now);
+}
+
+// Chosen like on Android: picking a sound saves it and plays it for a short
+// listen, which stops with the box.
+void FenixReminderSoundBox(
+		not_null<Ui::GenericBox*> box,
+		not_null<Main::Session*> session) {
+	constexpr auto kPreviewDuration = crl::time(2500);
+
+	box->setTitle(tr::lng_fenix_reminder_sound());
+
+	const auto group = std::make_shared<Ui::RadiobuttonGroup>(
+		int(Fenix::Get().messageReminderSound()));
+	for (const auto sound : {
+			Fenix::ReminderSound::Notification,
+			Fenix::ReminderSound::Alarm }) {
+		box->addRow(object_ptr<Ui::Radiobutton>(
+			box,
+			group,
+			int(sound),
+			ReminderSoundName(sound)));
+	}
+
+	const auto preview = box->lifetime().make_state<
+		std::unique_ptr<Media::Audio::Track>>();
+	const auto stop = box->lifetime().make_state<base::Timer>([=] {
+		*preview = nullptr;
+	});
+	group->setChangedCallback([=](int value) {
+		const auto sound = Fenix::ReminderSound(value);
+		Fenix::Get().setMessageReminderSound(sound);
+		*preview = Fenix::PreviewReminderSound(&session->data(), sound);
+		stop->callOnce(kPreviewDuration);
+	});
+
+	box->addButton(tr::lng_box_ok(), [=] { box->closeBox(); });
+}
+
 void BuildMessageReminderRows(SectionBuilder &builder) {
 	const auto controller = builder.controller();
+	const auto session = builder.session();
 
 	builder.addSkip();
 	builder.addSubsectionTitle(tr::lng_fenix_reminder_title());
@@ -434,6 +481,24 @@ void BuildMessageReminderRows(SectionBuilder &builder) {
 				controller->show(Box(FenixReminderDelayBox));
 			}
 		});
+
+	const auto soundId = ControlId(u"reminder_sound"_q);
+	const auto sound = builder.addButton({
+		.id = soundId,
+		.title = tr::lng_fenix_reminder_sound(),
+		.icon = { &st::menuIconSoundSelect },
+		.label = Fenix::Get().messageReminderSoundValue(
+		) | rpl::map(ReminderSoundName),
+		.onClick = [=] {
+			if (controller) {
+				controller->show(Box(FenixReminderSoundBox, session));
+			}
+		},
+		.keywords = { u"reminder"_q, u"sound"_q, u"alarm"_q },
+	});
+	if (sound && controller) {
+		Fenix::SetupCopyDeepLink(sound, controller, FenixId(), soundId);
+	}
 }
 
 void BuildChatLockRows(SectionBuilder &builder) {

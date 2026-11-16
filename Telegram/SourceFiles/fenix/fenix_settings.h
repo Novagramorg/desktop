@@ -27,6 +27,12 @@ enum class TextStyle {
 	Quote = 8,
 };
 
+// What the unread message reminder rings with (see fenix/reminder.h).
+enum class ReminderSound {
+	Notification = 0,
+	Alarm = 1,
+};
+
 class Settings final {
 public:
 	[[nodiscard]] static Settings &Instance();
@@ -110,6 +116,10 @@ public:
 	[[nodiscard]] int messageReminderDelay() const;
 	void setMessageReminderDelay(int minutes);
 
+	[[nodiscard]] ReminderSound messageReminderSound() const;
+	void setMessageReminderSound(ReminderSound value);
+	[[nodiscard]] rpl::producer<ReminderSound> messageReminderSoundValue() const;
+
 	// Approve incoming join requests in chats where you can add members.
 	[[nodiscard]] bool autoAcceptJoin() const;
 	void setAutoAcceptJoin(bool value);
@@ -176,6 +186,8 @@ private:
 	bool _messageReminder = false;
 	rpl::event_stream<bool> _messageReminderChanges;
 	int _messageReminderDelay = 5;
+	ReminderSound _messageReminderSound = ReminderSound::Notification;
+	rpl::event_stream<ReminderSound> _messageReminderSoundChanges;
 
 	bool _autoAcceptJoin = false;
 	rpl::event_stream<bool> _autoAcceptJoinChanges;

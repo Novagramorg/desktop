@@ -30,6 +30,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "data/data_user.h"
 #include "data/data_document.h"
 #include "data/data_poll.h"
+#include "fenix/reminder.h"
 #include "base/unixtime.h"
 #include "window/window_controller.h"
 #include "window/window_session_controller.h"
@@ -344,7 +345,9 @@ System::SkipState System::computeSkipState(
 			.silent = (forceSilent
 				|| !messageType
 				|| item->isSilent()
-				|| notifySettings->sound(thread).none),
+				|| notifySettings->sound(thread).none
+				// Novagram: the unread message reminder rings itself.
+				|| (messageType && Fenix::ReminderSilences(item))),
 		};
 	};
 	const auto showForMuted = messageType

@@ -341,6 +341,24 @@ void Settings::setMessageReminderDelay(int minutes) {
 	save();
 }
 
+ReminderSound Settings::messageReminderSound() const {
+	return _messageReminderSound;
+}
+
+void Settings::setMessageReminderSound(ReminderSound value) {
+	if (_messageReminderSound == value) {
+		return;
+	}
+	_messageReminderSound = value;
+	save();
+	_messageReminderSoundChanges.fire_copy(value);
+}
+
+rpl::producer<ReminderSound> Settings::messageReminderSoundValue() const {
+	return rpl::single(_messageReminderSound)
+		| rpl::then(_messageReminderSoundChanges.events());
+}
+
 bool Settings::autoAcceptJoin() const {
 	return _autoAcceptJoin;
 }
@@ -443,6 +461,10 @@ void Settings::load() {
 		root.value(u"message_reminder_delay"_q).toInt(5),
 		1,
 		59);
+	_messageReminderSound = (root.value(u"message_reminder_sound"_q).toInt(0)
+			== int(ReminderSound::Alarm))
+		? ReminderSound::Alarm
+		: ReminderSound::Notification;
 	_autoAcceptJoin = root.value(u"auto_accept_join"_q).toBool(false);
 	_avatarOpensProfile = root.value(u"avatar_opens_profile"_q).toBool(false);
 	_showSeconds = root.value(u"show_seconds"_q).toBool(false);
@@ -466,6 +488,7 @@ void Settings::save() {
 	root.insert(u"auto_answer_text"_q, _autoAnswerText);
 	root.insert(u"message_reminder"_q, _messageReminder);
 	root.insert(u"message_reminder_delay"_q, _messageReminderDelay);
+	root.insert(u"message_reminder_sound"_q, int(_messageReminderSound));
 	root.insert(u"auto_accept_join"_q, _autoAcceptJoin);
 	root.insert(u"avatar_opens_profile"_q, _avatarOpensProfile);
 	root.insert(u"show_seconds"_q, _showSeconds);
