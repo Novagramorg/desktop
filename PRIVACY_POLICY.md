@@ -126,9 +126,10 @@ inside the app or by uninstalling FenixUz through Windows Settings.
 ## 6. FenixUz-specific features and your privacy
 
 FenixUz adds optional privacy and convenience features on top of the
-standard Telegram client. None of them transmit information to us or to
-any third party other than Telegram, and several of them deliberately
-**reduce** the information shared with Telegram:
+standard Telegram client. None of them transmit information to us.
+Except for **Auto-translate** (described below), none of them transmit
+information to any third party other than Telegram, and several of them
+deliberately **reduce** the information shared with Telegram:
 
 - **Ghost Mode.** When enabled, FenixUz refuses to broadcast your
   online presence, typing/recording indicators, and read receipts to
@@ -139,6 +140,24 @@ any third party other than Telegram, and several of them deliberately
   "deleted by sender / by channel" label. The label and the underlying
   list are stored only on your device. Messages you delete yourself
   are still removed normally.
+- **Auto-translate (off by default, set per chat).** When you turn on
+  auto-translate for a chat, the text of each message you send in that
+  chat is first sent to **Google's translation service**
+  (`translate.googleapis.com`) so that the translated text can be sent
+  instead. If Google's service is unavailable, the text is translated
+  through Telegram's own translation feature instead. Google handles this
+  text under its own
+  [Privacy Policy](https://policies.google.com/privacy). Do not turn on
+  auto-translate in chats where you would not want message text shared
+  with Google.
+- **Chat lock.** Chat passcodes are stored on your device only as salted
+  hashes, never in clear text. The chat lock hides chats inside the app;
+  it does not encrypt their contents.
+- **Store review demo account.** When the single demo phone number
+  provided to Microsoft Store reviewers is entered on the sign-in screen,
+  the app requests that demo account's login code from a server run by
+  the publisher. No information about you or your device is sent in this
+  request, and it is never made for any other phone number.
 - **FenixUz Features section in Settings.** A unified place to
   configure these toggles. Settings are stored locally in JSON files
   inside `tdata`.
@@ -174,6 +193,9 @@ functionality:
 - **Microsoft** — distribution through the Microsoft Store and the
   underlying Windows platform. See
   https://privacy.microsoft.com/privacystatement.
+- **Google** — only when you turn on Auto-translate for a chat, the text
+  of the messages you send in that chat is sent to Google's translation
+  service (see section 6). See https://policies.google.com/privacy.
 - **Open-source libraries** bundled with the app (for example Qt,
   OpenSSL, FFmpeg, libwebrtc, and others). These execute only on your
   device and do not contact any servers controlled by us.
