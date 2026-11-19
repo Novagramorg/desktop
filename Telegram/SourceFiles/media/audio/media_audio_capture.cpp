@@ -12,6 +12,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "media/audio/media_audio_track.h"
 #include "ffmpeg/ffmpeg_utility.h"
 #include "base/timer.h"
+#include "fenix/voice/voice_effect.h"
 
 #include <al.h>
 #include <alc.h>
@@ -89,12 +90,14 @@ public:
 		Webrtc::DeviceResolvedId id,
 		Fn<void(Update)> updated,
 		Fn<void()> error,
-		Fn<void(Chunk)> externalProcessing);
+		Fn<void(Chunk)> externalProcessing,
+		Fenix::Voice::Preset voice);
 	void stop(Fn<void(Result&&)> callback = nullptr);
 	void pause(bool value, Fn<void(Result&&)> callback);
 
 private:
 	void process();
+	void appendCaptured(const std::vector<std::int16_t> &samples);
 
 	bool initializeFFmpeg();
 	[[nodiscard]] bool processFrame(int32 offset, int32 framesize);
@@ -114,6 +117,10 @@ private:
 	const std::unique_ptr<Private> d;
 	base::Timer _timer;
 	QByteArray _captured;
+
+	// Novagram voice changer: the effect of this recording, if any.
+	std::unique_ptr<Fenix::Voice::Effect> _voice;
+	std::vector<std::int16_t> _voiceOutput;
 
 	bool _paused = false;
 
@@ -137,6 +144,12 @@ Instance::Instance() : _inner(std::make_unique<Inner>(&_thread)) {
 void Instance::start(Fn<void(Chunk)> externalProcessing) {
 	_updates.fire_done();
 	const auto id = Audio::Current().captureDeviceId();
+	// Novagram voice changer: read here, on the main thread, for voice
+	// messages only (round videos record their sound through
+	// externalProcessing).
+	const auto voice = externalProcessing
+		? Fenix::Voice::Preset()
+		: Fenix::Voice::ChosenForMessages();
 	InvokeQueued(_inner.get(), [=] {
 		_inner->start(id, [=](Update update) {
 			crl::on_main(this, [=] {
@@ -146,7 +159,7 @@ void Instance::start(Fn<void(Chunk)> externalProcessing) {
 			crl::on_main(this, [=] {
 				_updates.fire_error(Error::Other);
 			});
-		}, externalProcessing);
+		}, externalProcessing, voice);
 		crl::on_main(this, [=] {
 			_started = true;
 		});
@@ -312,10 +325,12 @@ void Instance::Inner::start(
 		Webrtc::DeviceResolvedId id,
 		Fn<void(Update)> updated,
 		Fn<void()> error,
-		Fn<void(Chunk)> externalProcessing) {
+		Fn<void(Chunk)> externalProcessing,
+		Fenix::Voice::Preset voice) {
 	_externalProcessing = std::move(externalProcessing);
 	_updated = std::move(updated);
 	_error = std::move(error);
+	_voice = nullptr;
 	if (_paused) {
 		_paused = false;
 	}
@@ -347,7 +362,23 @@ void Instance::Inner::start(
 	_timer.callEach(50);
 	_captured.clear();
 	_captured.reserve(kCaptureBufferSlice);
+	if (voice.active() && !_externalProcessing) {
+		_voice = std::make_unique<Fenix::Voice::Effect>(
+			voice,
+			kCaptureFrequency);
+	}
 	DEBUG_LOG(("Audio Capture: started!"));
+}
+
+void Instance::Inner::appendCaptured(
+		const std::vector<std::int16_t> &samples) {
+	if (samples.empty()) {
+		return;
+	}
+	const auto bytes = qsizetype(samples.size() * sizeof(short));
+	const auto size = _captured.size();
+	_captured.resize(size + bytes);
+	memcpy(_captured.data() + size, samples.data(), bytes);
 }
 
 bool Instance::Inner::initializeFFmpeg() {
@@ -497,6 +528,15 @@ void Instance::Inner::stop(Fn<void(Result&&)> callback) {
 		alcCaptureCloseDevice(d->device);
 		d->device = nullptr;
 	}
+
+	// Novagram voice changer: what the effect still holds, with an echo
+	// dying away, ends the message.
+	if (const auto voice = base::take(_voice); voice && needResult) {
+		_voiceOutput.clear();
+		voice->drain(_voiceOutput);
+		appendCaptured(_voiceOutput);
+	}
+	_voiceOutput = std::vector<std::int16_t>();
 
 	// Write what is left
 	if (needResult && !_captured.isEmpty()) {
@@ -657,6 +697,20 @@ void Instance::Inner::process() {
 				.frequency = kCaptureFrequency,
 			});
 			return;
+		} else if (_voice) {
+			// Novagram voice changer: the new samples are replaced by the
+			// effect's output, which may be longer or shorter, so all that
+			// follows (level, waveform, length, encoding) is the changed
+			// voice.
+			_voiceOutput.clear();
+			_voice->process(
+				reinterpret_cast<const std::int16_t*>(
+					_captured.constData() + s),
+				samples,
+				_voiceOutput);
+			_captured.resize(s);
+			appendCaptured(_voiceOutput);
+			news = _captured.size();
 		}
 
 		// Count new recording level and update view
