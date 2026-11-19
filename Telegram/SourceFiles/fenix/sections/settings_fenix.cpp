@@ -10,6 +10,7 @@ This file is part of Novagram Desktop, a fork of Telegram Desktop by Vipads LLC.
 #include "fenix/message_cache.h"
 #include "fenix/reminder.h"
 #include "fenix/saved_history.h"
+#include "fenix/voice/voice_changer.h"
 #include "main/main_session.h"
 #include "main/main_session_settings.h"
 #include "media/audio/media_audio_track.h"
@@ -345,6 +346,35 @@ void BuildConfirmSendRows(SectionBuilder &builder) {
 	builder.addDivider();
 }
 
+// The voice changer, as on Android: the row names the chosen effect and
+// opens the same list as a right click on the microphone button.
+void BuildVoiceChangerRows(SectionBuilder &builder) {
+	const auto controller = builder.controller();
+
+	builder.addSkip();
+	builder.addSubsectionTitle(tr::lng_fenix_voice_changer());
+
+	const auto id = ControlId(u"voice_changer"_q);
+	const auto button = builder.addButton({
+		.id = id,
+		.title = tr::lng_fenix_voice_changer_messages(),
+		.icon = { &st::menuIconCustomize },
+		.label = Fenix::Voice::ChosenTitleValue(),
+		.onClick = [=] {
+			if (controller) {
+				controller->show(Box(Fenix::Voice::VoiceChangerBox));
+			}
+		},
+		.keywords = { u"voice"_q, u"changer"_q, u"effect"_q, u"robot"_q },
+	});
+	if (button && controller) {
+		Fenix::SetupCopyDeepLink(button, controller, FenixId(), id);
+	}
+
+	builder.addSkip();
+	builder.addDividerText(tr::lng_fenix_voice_changer_about());
+}
+
 void FenixAutoAnswerTextBox(not_null<Ui::GenericBox*> box) {
 	box->setTitle(tr::lng_fenix_auto_answer_text());
 
@@ -575,6 +605,7 @@ const auto kMeta = BuildHelper({
 	BuildStopAutoDownloadRow(builder);
 	BuildInterfaceRows(builder);
 	BuildConfirmSendRows(builder);
+	BuildVoiceChangerRows(builder);
 	BuildAutoAnswerRows(builder);
 	BuildMessageReminderRows(builder);
 	BuildChatLockRows(builder);
