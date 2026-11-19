@@ -425,6 +425,24 @@ rpl::producer<bool> Settings::showSecondsValue() const {
 		| rpl::then(_showSecondsChanges.events());
 }
 
+VoiceChangerChoice Settings::voiceChanger() const {
+	return _voiceChanger;
+}
+
+void Settings::setVoiceChanger(VoiceChangerChoice value) {
+	if (_voiceChanger == value) {
+		return;
+	}
+	_voiceChanger = value;
+	save();
+	_voiceChangerChanges.fire_copy(value);
+}
+
+rpl::producer<VoiceChangerChoice> Settings::voiceChangerValue() const {
+	return rpl::single(_voiceChanger)
+		| rpl::then(_voiceChangerChanges.events());
+}
+
 void Settings::load() {
 	auto file = QFile(FilePath());
 	if (!file.open(QIODevice::ReadOnly)) {
@@ -469,6 +487,19 @@ void Settings::load() {
 	_autoAcceptJoin = root.value(u"auto_accept_join"_q).toBool(false);
 	_avatarOpensProfile = root.value(u"avatar_opens_profile"_q).toBool(false);
 	_showSeconds = root.value(u"show_seconds"_q).toBool(false);
+	const auto defaultVoice = VoiceChangerChoice();
+	_voiceChanger = VoiceChangerChoice{
+		.preset = root.value(u"voice_changer_preset"_q).toInt(
+			defaultVoice.preset),
+		.tone = root.value(u"voice_changer_tone"_q).toInt(
+			defaultVoice.tone),
+		.echoDelay = root.value(u"voice_changer_echo_delay"_q).toInt(
+			defaultVoice.echoDelay),
+		.echoVolume = root.value(u"voice_changer_echo_volume"_q).toInt(
+			defaultVoice.echoVolume),
+		.noiseVolume = root.value(u"voice_changer_noise_volume"_q).toInt(
+			defaultVoice.noiseVolume),
+	};
 }
 
 void Settings::save() {
@@ -493,6 +524,11 @@ void Settings::save() {
 	root.insert(u"auto_accept_join"_q, _autoAcceptJoin);
 	root.insert(u"avatar_opens_profile"_q, _avatarOpensProfile);
 	root.insert(u"show_seconds"_q, _showSeconds);
+	root.insert(u"voice_changer_preset"_q, _voiceChanger.preset);
+	root.insert(u"voice_changer_tone"_q, _voiceChanger.tone);
+	root.insert(u"voice_changer_echo_delay"_q, _voiceChanger.echoDelay);
+	root.insert(u"voice_changer_echo_volume"_q, _voiceChanger.echoVolume);
+	root.insert(u"voice_changer_noise_volume"_q, _voiceChanger.noiseVolume);
 
 	const auto path = FilePath();
 	QDir().mkpath(QFileInfo(path).absolutePath());

@@ -35,6 +35,21 @@ enum class ReminderSound {
 	Signal = 3,
 };
 
+// The voice changer's choice for voice messages (see fenix/voice): the
+// effect's id, as on Android, and the settings of the three effects that
+// have them. Ranges are checked where it is used.
+struct VoiceChangerChoice {
+	int preset = 0;
+	int tone = 5;
+	int echoDelay = 5;
+	int echoVolume = 7;
+	int noiseVolume = 7;
+
+	friend inline bool operator==(
+		const VoiceChangerChoice &,
+		const VoiceChangerChoice &) = default;
+};
+
 class Settings final {
 public:
 	[[nodiscard]] static Settings &Instance();
@@ -140,6 +155,10 @@ public:
 	[[nodiscard]] rpl::producer<bool> showSecondsChanges() const;
 	[[nodiscard]] rpl::producer<bool> showSecondsValue() const;
 
+	[[nodiscard]] VoiceChangerChoice voiceChanger() const;
+	void setVoiceChanger(VoiceChangerChoice value);
+	[[nodiscard]] rpl::producer<VoiceChangerChoice> voiceChangerValue() const;
+
 private:
 	Settings();
 	~Settings() = default;
@@ -199,6 +218,9 @@ private:
 
 	bool _showSeconds = false;
 	rpl::event_stream<bool> _showSecondsChanges;
+
+	VoiceChangerChoice _voiceChanger;
+	rpl::event_stream<VoiceChangerChoice> _voiceChangerChanges;
 };
 
 [[nodiscard]] inline Settings &Get() {
