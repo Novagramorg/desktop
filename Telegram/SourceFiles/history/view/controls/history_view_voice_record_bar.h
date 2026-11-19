@@ -133,6 +133,10 @@ private:
 	void updateMessageGeometry();
 	void updateLockGeometry();
 	void updateTTLGeometry(TTLAnimationType type, float64 progress);
+	void updateVoiceChangerGeometry(
+		TTLAnimationType type,
+		float64 progress);
+	void openVoiceChanger(Fn<void()> resume);
 
 	void recordUpdated(quint16 level, int samples);
 	void checkTipRequired();
@@ -183,6 +187,10 @@ private:
 	const std::unique_ptr<VoiceRecordButton> _level;
 	const std::unique_ptr<CancelButton> _cancel;
 	std::unique_ptr<Ui::AbstractButton> _ttlButton;
+	// Novagram voice changer: above the lock (and the view-once button).
+	std::unique_ptr<Ui::AbstractButton> _voiceChanger;
+	rpl::lifetime _voiceChangerLifetime;
+	bool _voiceChangerPausing = false;
 	std::unique_ptr<ListenWrap> _listen;
 
 	Ui::RoundVideoResult _data;

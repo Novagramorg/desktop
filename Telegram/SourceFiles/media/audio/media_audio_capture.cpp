@@ -94,6 +94,7 @@ public:
 		Fenix::Voice::Preset voice);
 	void stop(Fn<void(Result&&)> callback = nullptr);
 	void pause(bool value, Fn<void(Result&&)> callback);
+	void changeVoice(Fenix::Voice::Preset voice);
 
 private:
 	void process();
@@ -183,6 +184,11 @@ void Instance::stop(Fn<void(Result&&)> callback) {
 }
 
 void Instance::pause(bool value, Fn<void(Result&&)> callback) {
+	// Novagram voice changer: a voice message goes on with the effect chosen
+	// now, which may have changed while it was paused.
+	const auto voice = value
+		? Fenix::Voice::Preset()
+		: Fenix::Voice::ChosenForMessages();
 	InvokeQueued(_inner.get(), [=] {
 		auto done = callback
 			? [=](Result &&result) {
@@ -191,6 +197,9 @@ void Instance::pause(bool value, Fn<void(Result&&)> callback) {
 				});
 			}
 			: std::move(callback);
+		if (!value) {
+			_inner->changeVoice(voice);
+		}
 		_inner->pause(value, std::move(done));
 	});
 }
@@ -379,6 +388,28 @@ void Instance::Inner::appendCaptured(
 	const auto size = _captured.size();
 	_captured.resize(size + bytes);
 	memcpy(_captured.data() + size, samples.data(), bytes);
+}
+
+void Instance::Inner::changeVoice(Fenix::Voice::Preset voice) {
+	// Only a paused voice message changes its effect, as it resumes.
+	if (!_paused || _externalProcessing || !d->device) {
+		return;
+	}
+	const auto active = voice.active();
+	if (_voice ? (active && (_voice->preset() == voice)) : !active) {
+		return;
+	}
+	// The part before the pause keeps its effect to the end, with an echo
+	// dying away, as Android ends each part; what follows gets the new one.
+	if (_voice) {
+		_voiceOutput.clear();
+		_voice->drain(_voiceOutput);
+		appendCaptured(_voiceOutput);
+		_voiceOutput.clear();
+	}
+	_voice = active
+		? std::make_unique<Fenix::Voice::Effect>(voice, kCaptureFrequency)
+		: nullptr;
 }
 
 bool Instance::Inner::initializeFFmpeg() {

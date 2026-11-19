@@ -10,15 +10,20 @@ This file is part of Novagram Desktop, a fork of Telegram Desktop by Vipads LLC.
 #include "base/unique_qptr.h"
 #include "lang/lang_keys.h"
 #include "settings/settings_common.h"
+#include "ui/effects/animations.h"
+#include "ui/effects/ripple_animation.h"
 #include "ui/layers/generic_box.h"
 #include "ui/layers/show.h"
+#include "ui/painter.h"
 #include "ui/vertical_list.h"
+#include "ui/widgets/buttons.h"
 #include "ui/widgets/checkbox.h"
 #include "ui/widgets/continuous_sliders.h"
 #include "ui/widgets/labels.h"
 #include "ui/widgets/popup_menu.h"
 #include "ui/wrap/vertical_layout.h"
 #include "styles/style_boxes.h"
+#include "styles/style_fenix.h"
 #include "styles/style_layers.h"
 #include "styles/style_menu_icons.h"
 #include "styles/style_settings.h"
@@ -325,6 +330,93 @@ void SpeedBox(not_null<Ui::GenericBox*> box, Fn<void(Choice)> done) {
 	box->addButton(tr::lng_cancel(), [=] { box->closeBox(); });
 }
 
+class RecordingButton final : public Ui::RippleButton {
+public:
+	RecordingButton(
+		not_null<Ui::RpWidget*> parent,
+		const style::RippleAnimation &ripple,
+		int size,
+		QMargins rippleMargins,
+		Fn<QRect(QPainter&, QRect)> paintCircle,
+		const style::color &fg);
+
+protected:
+	QImage prepareRippleMask() const override;
+	QPoint prepareRippleStartPosition() const override;
+
+private:
+	const QRect _rippleRect;
+	Ui::Animations::Simple _onAnimation;
+	bool _on = false;
+
+};
+
+RecordingButton::RecordingButton(
+	not_null<Ui::RpWidget*> parent,
+	const style::RippleAnimation &ripple,
+	int size,
+	QMargins rippleMargins,
+	Fn<QRect(QPainter&, QRect)> paintCircle,
+	const style::color &fg)
+: RippleButton(parent, ripple)
+, _rippleRect(QRect(0, 0, size, size) - rippleMargins)
+, _on(ChosenIsOn()) {
+	resize(size, size);
+
+	ChosenIsOnValue(
+	) | rpl::on_next([=](bool on) {
+		if (_on == on) {
+			return;
+		}
+		_on = on;
+		_onAnimation.start(
+			[=] { update(); },
+			on ? 0. : 1.,
+			on ? 1. : 0.,
+			st::universalDuration);
+	}, lifetime());
+
+	ChosenTitleValue(
+	) | rpl::on_next([=](const QString &title) {
+		setAccessibleName(tr::lng_fenix_voice_changer_current(
+			tr::now,
+			lt_effect,
+			title));
+	}, lifetime());
+
+	paintRequest(
+	) | rpl::on_next([=] {
+		auto p = QPainter(this);
+		const auto inner = paintCircle(p, rect());
+		paintRipple(p, _rippleRect.x(), _rippleRect.y());
+
+		const auto on = _onAnimation.value(_on ? 1. : 0.);
+		if (on > 0.) {
+			auto hq = PainterHighQualityEnabler(p);
+			p.setPen(Qt::NoPen);
+			p.setBrush(st::historySendIconFg);
+			const auto radius = st::novagramVoiceChangerOnRadius * on;
+			p.drawEllipse(QRectF(inner).center(), radius, radius);
+		}
+		if (on < 1.) {
+			p.setOpacity(1. - on);
+			st::novagramVoiceChangerIcon.paintInCenter(p, inner, fg->c);
+		}
+		if (on > 0.) {
+			p.setOpacity(on);
+			st::novagramVoiceChangerIconOn.paintInCenter(p, inner);
+		}
+	}, lifetime());
+}
+
+QImage RecordingButton::prepareRippleMask() const {
+	return Ui::RippleAnimation::EllipseMask(_rippleRect.size());
+}
+
+QPoint RecordingButton::prepareRippleStartPosition() const {
+	return mapFromGlobal(QCursor::pos()) - _rippleRect.topLeft();
+}
+
 } // namespace
 
 QString ChosenTitle() {
@@ -336,6 +428,33 @@ rpl::producer<QString> ChosenTitleValue() {
 	) | rpl::map([](const Choice &choice) {
 		return TitleOf(choice.preset);
 	});
+}
+
+bool ChosenIsOn() {
+	return IsOn(Fenix::Get().voiceChanger().preset);
+}
+
+rpl::producer<bool> ChosenIsOnValue() {
+	return Fenix::Get().voiceChangerValue(
+	) | rpl::map([](const Choice &choice) {
+		return IsOn(choice.preset);
+	}) | rpl::distinct_until_changed();
+}
+
+std::unique_ptr<Ui::AbstractButton> CreateRecordingButton(
+		not_null<Ui::RpWidget*> parent,
+		const style::RippleAnimation &ripple,
+		int size,
+		QMargins rippleMargins,
+		Fn<QRect(QPainter&, QRect)> paintCircle,
+		const style::color &fg) {
+	return std::make_unique<RecordingButton>(
+		parent,
+		ripple,
+		size,
+		rippleMargins,
+		std::move(paintCircle),
+		fg);
 }
 
 void VoiceChangerBox(not_null<Ui::GenericBox*> box) {

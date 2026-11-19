@@ -8,6 +8,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "history/view/controls/history_view_voice_record_bar.h"
 
 #include "api/api_send_progress.h"
+#include "base/call_delayed.h"
 #include "base/event_filter.h"
 #include "base/random.h"
 #include "base/unixtime.h"
@@ -38,6 +39,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "ui/effects/animation_value.h"
 #include "ui/effects/animation_value_f.h"
 #include "ui/effects/ripple_animation.h"
+#include "ui/layers/generic_box.h"
 #include "ui/text/format_values.h"
 #include "ui/text/text_utilities.h"
 #include "ui/dynamic_image.h"
@@ -2224,6 +2226,82 @@ void VoiceRecordBar::updateTTLGeometry(
 	}
 }
 
+void VoiceRecordBar::updateVoiceChangerGeometry(
+		TTLAnimationType type,
+		float64 progress) {
+	if (!_voiceChanger) {
+		return;
+	}
+	const auto parent = parentWidget();
+	const auto me = Ui::MapFrom(_outerContainer, parent, geometry());
+	const auto anyTop = me.y() - st::historyRecordLockPosition.y();
+	const auto lockHiddenProgress = (_lockShowing.current() || !_fullRecord)
+		? 0.
+		: (1. - _showLockAnimation.value(0.));
+	// Above the lock's place, while it shows, and the view-once button.
+	const auto size = _voiceChanger->height();
+	const auto below = (1. - lockHiddenProgress)
+		+ ((_ttlButton && !_ttlButton->isHidden()) ? 1. : 0.);
+	const auto top = int(base::SafeRound(anyTop - size - size * below));
+	if (type == TTLAnimationType::RightLeft) {
+		const auto finalRight = _outerContainer->width()
+			- rect::right(me)
+			+ st::historyRecordLockPosition.x();
+		const auto from = -_voiceChanger->width();
+		const auto right = anim::interpolate(from, finalRight, progress);
+		_voiceChanger->moveToRight(right, top);
+	} else if (type == TTLAnimationType::RightTopStatic) {
+		_voiceChanger->moveToRight(-_voiceChanger->width(), top);
+	}
+}
+
+void VoiceRecordBar::openVoiceChanger(Fn<void()> resume) {
+	if (_voiceChangerPausing) {
+		return;
+	}
+	// As on Android: a recording pauses, as with its pause button, while the
+	// effects are open, and goes on by itself once they close, an effect
+	// picked or not (the one picked applies from there on). A recording
+	// paused already stays paused.
+	const auto showBox = [=](bool resumeOnClose) {
+		auto box = Box(Fenix::Voice::VoiceChangerBox);
+		if (resumeOnClose) {
+			const auto ready = [=] {
+				return isListenState() && !_showListenAnimation.animating();
+			};
+			box->boxClosing(
+			) | rpl::take(1) | rpl::on_next(crl::guard(this, [=] {
+				if (ready()) {
+					resume();
+				} else if (isListenState()) {
+					// Closed as the preview was still coming in.
+					base::call_delayed(st::universalDuration, this, [=] {
+						if (ready()) {
+							resume();
+						}
+					});
+				}
+			}), box->lifetime());
+		}
+		_show->showBox(std::move(box));
+	};
+	if (!isRecording() || !_lock->isStopState() || isListenState()) {
+		showBox(false);
+		return;
+	}
+	// The effects open once the pause is done, so that closing them always
+	// finds the preview to resume from.
+	_voiceChangerPausing = true;
+	_listenChanges.events(
+	) | rpl::filter([=] {
+		return isListenState();
+	}) | rpl::take(1) | rpl::on_next([=] {
+		_voiceChangerPausing = false;
+		showBox(true);
+	}, _voiceChangerLifetime);
+	stopRecording(StopType::Listen);
+}
+
 void VoiceRecordBar::init() {
 	if (_st.radius > 0) {
 		_backgroundRect.emplace(_st.radius, _st.bg);
@@ -2324,6 +2402,7 @@ void VoiceRecordBar::init() {
 			}
 			if (_fullRecord && !show) {
 				updateTTLGeometry(TTLAnimationType::RightLeft, 1.);
+				updateVoiceChangerGeometry(TTLAnimationType::RightLeft, 1.);
 			}
 		};
 		_showLockAnimation.start(std::move(callback), from, to, duration);
@@ -2355,20 +2434,25 @@ void VoiceRecordBar::init() {
 		update();
 	};
 
+	// From the preview back to recording (Novagram: the voice changer's
+	// button resumes this way too).
+	const auto resumeListen = [=] {
+		applyListenTrimForResume();
+		startRecording();
+		_showListenAnimation.stop();
+		_showListenAnimation.start([=](float64 value) {
+			_listen->requestPaintProgress(1.);
+			paintShowListenCallback(value);
+			if (!value) {
+				_listen = nullptr;
+			}
+		}, 1., 0., st::universalDuration * 2);
+		setLevelAsSend();
+	};
+
 	_lock->setClickedCallback([=] {
 		if (isListenState()) {
-			applyListenTrimForResume();
-			startRecording();
-			_showListenAnimation.stop();
-			_showListenAnimation.start([=](float64 value) {
-				_listen->requestPaintProgress(1.);
-				paintShowListenCallback(value);
-				if (!value) {
-					_listen = nullptr;
-				}
-			}, 1., 0., st::universalDuration * 2);
-			setLevelAsSend();
-
+			resumeListen();
 			return;
 		}
 		if (!_lock->isStopState()) {
@@ -2419,6 +2503,26 @@ void VoiceRecordBar::init() {
 		}
 		updateTTLGeometry(TTLAnimationType::RightTopStatic, 0);
 
+		// Novagram voice changer: its button above, as on Android.
+		if (!_recordingVideo) {
+			if (!_voiceChanger) {
+				_voiceChanger = Fenix::Voice::CreateRecordingButton(
+					_outerContainer,
+					_st.lock.ripple,
+					st::historyRecordLockTopShadow.width(),
+					st::historyRecordLockRippleMargin,
+					[=](QPainter &p, QRect rect) {
+						return DrawLockCircle(p, rect, _st.lock, 1.);
+					},
+					_st.lock.fg);
+				_voiceChanger->setClickedCallback([=] {
+					openVoiceChanger(resumeListen);
+				});
+			}
+			_voiceChanger->show();
+		}
+		updateVoiceChangerGeometry(TTLAnimationType::RightTopStatic, 0);
+
 		setLevelAsSend();
 
 		auto callback = [=](float64 value) {
@@ -2426,6 +2530,7 @@ void VoiceRecordBar::init() {
 			_level->requestPaintColor(activeAnimationRatio());
 			update();
 			updateTTLGeometry(TTLAnimationType::RightLeft, value);
+			updateVoiceChangerGeometry(TTLAnimationType::RightLeft, value);
 		};
 		_lockToStopAnimation.start(
 			std::move(callback),
@@ -2488,6 +2593,9 @@ void VoiceRecordBar::prepareOnSendPress() {
 	_recordingVideo = (_send->type() == Ui::SendButton::Type::Round);
 	_fullRecord = false;
 	_ttlButton = nullptr;
+	_voiceChanger = nullptr;
+	_voiceChangerLifetime.destroy();
+	_voiceChangerPausing = false;
 	clearResumeState();
 	_lock->setRecordingVideo(_recordingVideo);
 }
@@ -2576,6 +2684,7 @@ void VoiceRecordBar::initLockGeometry() {
 	parent->geometryValue(
 	) | rpl::on_next([=] {
 		updateTTLGeometry(TTLAnimationType::RightLeft, 1.);
+		updateVoiceChangerGeometry(TTLAnimationType::RightLeft, 1.);
 	}, lifetime());
 }
 
@@ -2863,6 +2972,11 @@ void VoiceRecordBar::finish() {
 	_listen = nullptr;
 
 	[[maybe_unused]] const auto s = takeTTLState();
+	if (_voiceChanger) {
+		_voiceChanger->hide();
+	}
+	_voiceChangerLifetime.destroy();
+	_voiceChangerPausing = false;
 
 	const auto type = _recordingVideo
 		? Api::SendProgressType::RecordRound
@@ -2877,6 +2991,9 @@ void VoiceRecordBar::hideFast() {
 	_lock->hide();
 	_level->hide();
 	[[maybe_unused]] const auto s = takeTTLState();
+	if (_voiceChanger) {
+		_voiceChanger->hide();
+	}
 	_keyFilterInRecordingState = nullptr;
 }
 
@@ -3230,7 +3347,10 @@ bool VoiceRecordBar::isRecordingByAnotherBar() const {
 }
 
 bool VoiceRecordBar::isTTLButtonShown() const {
-	return _ttlButton && !_ttlButton->isHidden();
+	// Novagram: the voice changer's button stands in that column too, so the
+	// corner buttons keep away from it as well.
+	return (_ttlButton && !_ttlButton->isHidden())
+		|| (_voiceChanger && !_voiceChanger->isHidden());
 }
 
 bool VoiceRecordBar::hasDuration() const {

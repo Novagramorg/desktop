@@ -88,6 +88,8 @@ struct Preset {
 	[[nodiscard]] bool active() const {
 		return (id != kOff);
 	}
+
+	friend inline bool operator==(const Preset &, const Preset &) = default;
 };
 
 // The picker's rows in Android's order, kSpeedRow standing for the speeds.

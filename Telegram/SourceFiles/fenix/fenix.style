@@ -59,3 +59,9 @@ novagramDeletedEmptyWidth: 300px;
 novagramDeletedEmptyPadding: margins(16px, 12px, 16px, 13px);
 novagramDeletedEmptySkip: 4px;
 novagramDeletedEmptyTitleFont: font(14px semibold);
+
+// The voice changer button above a locked recording, as Android's (Material
+// Icons "record_voice_over"): white on a filled circle while an effect is on.
+novagramVoiceChangerIcon: icon {{ "voice_lock/voice_changer-22x22", historyToDownFg }};
+novagramVoiceChangerIconOn: icon {{ "voice_lock/voice_changer-22x22", windowFgActive }};
+novagramVoiceChangerOnRadius: 16px;
