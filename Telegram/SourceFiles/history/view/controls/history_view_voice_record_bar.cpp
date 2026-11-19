@@ -24,6 +24,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "main/main_session.h"
 #include "mainwidget.h" // MainWidget::stopAndClosePlayer
 #include "mainwindow.h"
+#include "fenix/voice/voice_changer.h"
 #include "media/audio/media_audio.h"
 #include "media/audio/media_audio_edit.h"
 #include "media/audio/media_audio_capture.h"
@@ -2454,6 +2455,12 @@ void VoiceRecordBar::init() {
 		}
 	}, lifetime());
 
+	// Novagram voice changer: a right click on the microphone opens it.
+	Fenix::Voice::SetupRecordButtonMenu(this, _send.get(), _show, [=] {
+		return isHidden()
+			&& (_send->type() == Ui::SendButton::Type::Record);
+	});
+
 	_listenChanges.events(
 	) | rpl::filter([=] {
 		return _listen != nullptr;
@@ -2652,6 +2659,10 @@ void VoiceRecordBar::startRecording() {
 			instance()->start(_videoRecorder
 				? _videoRecorder->audioChunkProcessor()
 				: nullptr);
+			// Novagram voice changer: says which voice this message gets.
+			if (!_videoRecorder) {
+				Fenix::Voice::ShowRecordingToast(_show);
+			}
 		}
 		instance()->updated(
 		) | rpl::on_next_error([=](const Update &update) {

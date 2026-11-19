@@ -6,6 +6,8 @@ This file is part of Novagram Desktop, a fork of Telegram Desktop by Vipads LLC.
 #include "fenix/fenix_settings.h"
 #include "fenix/voice/voice_effect.h"
 #include "base/call_delayed.h"
+#include "base/event_filter.h"
+#include "base/unique_qptr.h"
 #include "lang/lang_keys.h"
 #include "settings/settings_common.h"
 #include "ui/layers/generic_box.h"
@@ -14,11 +16,16 @@ This file is part of Novagram Desktop, a fork of Telegram Desktop by Vipads LLC.
 #include "ui/widgets/checkbox.h"
 #include "ui/widgets/continuous_sliders.h"
 #include "ui/widgets/labels.h"
+#include "ui/widgets/popup_menu.h"
 #include "ui/wrap/vertical_layout.h"
 #include "styles/style_boxes.h"
 #include "styles/style_layers.h"
+#include "styles/style_menu_icons.h"
 #include "styles/style_settings.h"
 #include "styles/style_widgets.h"
+
+#include <QtGui/QCursor>
+#include <QtGui/QMouseEvent>
 
 namespace Fenix::Voice {
 namespace {
@@ -27,6 +34,7 @@ using Choice = Fenix::VoiceChangerChoice;
 
 // Long enough to see the radio button move, as on Android.
 constexpr auto kCloseDelay = crl::time(150);
+constexpr auto kToastDuration = crl::time(2000);
 
 [[nodiscard]] QString Emoji(int id) {
 	if (id == kSpeedRow || IsSpeed(id)) {
@@ -115,6 +123,10 @@ constexpr auto kCloseDelay = crl::time(150);
 
 [[nodiscard]] QString TitleOf(int preset) {
 	return Name(IsKnown(preset) ? preset : kOff);
+}
+
+[[nodiscard]] bool IsOn(int preset) {
+	return IsKnown(preset) && (preset != kOff);
 }
 
 // A row's text: the emoji and the name, then the settings of the three
@@ -435,6 +447,59 @@ void VoiceChangerBox(not_null<Ui::GenericBox*> box) {
 	}
 
 	box->addButton(tr::lng_box_ok(), [=] { box->closeBox(); });
+}
+
+void SetupRecordButtonMenu(
+		not_null<QObject*> context,
+		not_null<QWidget*> button,
+		std::shared_ptr<Ui::Show> show,
+		Fn<bool()> available) {
+	const auto menu = std::make_shared<base::unique_qptr<Ui::PopupMenu>>();
+	base::install_event_filter(context, button, [=](not_null<QEvent*> e) {
+		const auto type = e->type();
+		if (type == QEvent::ContextMenu) {
+			if (!available() || !show->valid()) {
+				return base::EventFilterResult::Continue;
+			}
+			*menu = base::make_unique_q<Ui::PopupMenu>(
+				button,
+				st::popupMenuWithIcons);
+			(*menu)->addAction(
+				tr::lng_fenix_voice_changer_current(
+					tr::now,
+					lt_effect,
+					ChosenTitle()),
+				[=] { show->showBox(Box(VoiceChangerBox)); },
+				&st::menuIconCustomize);
+			(*menu)->popup(QCursor::pos());
+			return base::EventFilterResult::Cancel;
+		} else if (type == QEvent::MouseButtonPress
+			|| type == QEvent::MouseButtonRelease
+			|| type == QEvent::MouseButtonDblClick) {
+			// A right click opens the menu above; it shouldn't also start
+			// a recording, as a hold on the button does.
+			const auto mouse = static_cast<QMouseEvent*>(e.get());
+			if (mouse->button() == Qt::RightButton && available()) {
+				return base::EventFilterResult::Cancel;
+			}
+		}
+		return base::EventFilterResult::Continue;
+	});
+}
+
+void ShowRecordingToast(const std::shared_ptr<Ui::Show> &show) {
+	const auto preset = Fenix::Get().voiceChanger().preset;
+	if (!show || !show->valid() || !IsOn(preset)) {
+		return;
+	}
+	show->showToast(
+		Emoji(preset)
+			+ u" "_q
+			+ tr::lng_fenix_voice_changer_current(
+				tr::now,
+				lt_effect,
+				Name(preset)),
+		kToastDuration);
 }
 
 } // namespace Fenix::Voice
