@@ -216,6 +216,9 @@ PRIVATE
     editor/scene/scene_text_editing.cpp
     editor/scene/scene_text_editing.h
 
+    fenix/voice/voice_call_adm.cpp
+    fenix/voice/voice_call_adm.h
+
     ui/boxes/about_cocoon_box.h
     ui/boxes/about_cocoon_box.cpp
 

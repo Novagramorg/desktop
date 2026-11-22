@@ -20,6 +20,8 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "data/data_group_call.h"
 #include "data/data_session.h"
 #include "data/data_user.h"
+#include "fenix/voice/voice_call_adm.h"
+#include "fenix/voice/voice_changer.h"
 #include "lang/lang_keys.h"
 #include "main/main_app_config.h"
 #include "main/main_session.h"
@@ -1212,8 +1214,11 @@ void Call::createAndStartController(const MTPDphoneCall &call) {
 				sendSignalingData(bytes);
 			});
 		},
-		.createAudioDeviceModule = Webrtc::AudioDeviceModuleCreator(
-			saveSetDeviceIdCallback),
+		// Novagram voice changer: the microphone through the effect chosen
+		// for calls, for as long as this controller lives.
+		.createAudioDeviceModule = Fenix::Voice::WrapCallAudioDeviceModule(
+			Webrtc::AudioDeviceModuleCreator(saveSetDeviceIdCallback),
+			Fenix::Voice::TrackCallVoice(_instanceLifetime)),
 	};
 	if (Logs::DebugEnabled()) {
 		const auto callLogFolder = cWorkingDir() + u"DebugLogs"_q;

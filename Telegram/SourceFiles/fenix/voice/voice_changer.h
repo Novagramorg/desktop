@@ -20,6 +20,8 @@ class Show;
 
 namespace Fenix::Voice {
 
+class CallVoiceSource;
+
 // The chosen effect's name, as the settings row shows it ("Off" for none).
 [[nodiscard]] QString ChosenTitle();
 [[nodiscard]] rpl::producer<QString> ChosenTitleValue();
@@ -56,5 +58,11 @@ void SetupRecordButtonMenu(
 // A short toast naming the effect as a voice message starts recording, so
 // a changed voice is never sent by mistake. Nothing when none is chosen.
 void ShowRecordingToast(const std::shared_ptr<Ui::Show> &show);
+
+// The effect for calls, for a call's microphone (see voice_call_adm.h): it
+// follows the choice, also during the call, for as long as [lifetime] lives.
+// Main thread.
+[[nodiscard]] std::shared_ptr<CallVoiceSource> TrackCallVoice(
+	rpl::lifetime &lifetime);
 
 } // namespace Fenix::Voice

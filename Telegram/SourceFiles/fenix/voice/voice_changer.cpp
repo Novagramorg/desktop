@@ -4,6 +4,7 @@ This file is part of Novagram Desktop, a fork of Telegram Desktop by Vipads LLC.
 #include "fenix/voice/voice_changer.h"
 
 #include "fenix/fenix_settings.h"
+#include "fenix/voice/voice_call.h"
 #include "fenix/voice/voice_effect.h"
 #include "base/call_delayed.h"
 #include "base/event_filter.h"
@@ -619,6 +620,15 @@ void ShowRecordingToast(const std::shared_ptr<Ui::Show> &show) {
 				lt_effect,
 				Name(preset)),
 		kToastDuration);
+}
+
+std::shared_ptr<CallVoiceSource> TrackCallVoice(rpl::lifetime &lifetime) {
+	auto result = std::make_shared<CallVoiceSource>();
+	Fenix::Get().callVoiceChangerValue(
+	) | rpl::on_next([=](const Choice &) {
+		result->set(ChosenForCalls());
+	}, lifetime);
+	return result;
 }
 
 } // namespace Fenix::Voice

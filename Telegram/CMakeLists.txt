@@ -1022,6 +1022,8 @@ PRIVATE
     fenix/chat_lock_box.h
     fenix/reminder.cpp
     fenix/reminder.h
+    fenix/voice/voice_call.cpp
+    fenix/voice/voice_call.h
     fenix/voice/voice_changer.cpp
     fenix/voice/voice_changer.h
     fenix/voice/voice_effect.cpp

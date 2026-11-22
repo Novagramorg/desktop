@@ -32,6 +32,8 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "data/data_group_call.h"
 #include "data/data_peer_values.h"
 #include "data/data_session.h"
+#include "fenix/voice/voice_call_adm.h"
+#include "fenix/voice/voice_changer.h"
 #include "base/global_shortcuts.h"
 #include "base/random.h"
 #include "tde2e/tde2e_api.h"
@@ -3066,8 +3068,11 @@ bool GroupCall::tryCreateController() {
 		},
 		.initialInputDeviceId = captureDeviceIdInitial.value.toStdString(),
 		.initialOutputDeviceId = playbackDeviceIdInitial.value.toStdString(),
-		.createAudioDeviceModule = Webrtc::AudioDeviceModuleCreator(
-			saveSetDeviceIdCallback),
+		// Novagram voice changer: the microphone through the effect chosen
+		// for calls (a rejoin makes a new controller, following it too).
+		.createAudioDeviceModule = Fenix::Voice::WrapCallAudioDeviceModule(
+			Webrtc::AudioDeviceModuleCreator(saveSetDeviceIdCallback),
+			Fenix::Voice::TrackCallVoice(lifetime())),
 		.videoCapture = _cameraCapture,
 		.requestCurrentTime = [=, call = base::make_weak(this)](
 				std::function<void(int64_t)> done) {
