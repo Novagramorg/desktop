@@ -19,6 +19,35 @@ namespace {
 	return cWorkingDir() + u"tdata/fenix_settings.json"_q;
 }
 
+// The voice changer's keys, "voice_changer_" for voice messages and
+// "voice_changer_call_" for calls, as Android's "call_" ones.
+[[nodiscard]] VoiceChangerChoice ReadVoiceChanger(
+		const QJsonObject &root,
+		const QString &prefix) {
+	const auto value = [&](const QString &key, int fallback) {
+		return root.value(prefix + key).toInt(fallback);
+	};
+	const auto defaults = VoiceChangerChoice();
+	return VoiceChangerChoice{
+		.preset = value(u"preset"_q, defaults.preset),
+		.tone = value(u"tone"_q, defaults.tone),
+		.echoDelay = value(u"echo_delay"_q, defaults.echoDelay),
+		.echoVolume = value(u"echo_volume"_q, defaults.echoVolume),
+		.noiseVolume = value(u"noise_volume"_q, defaults.noiseVolume),
+	};
+}
+
+void WriteVoiceChanger(
+		QJsonObject &root,
+		const QString &prefix,
+		const VoiceChangerChoice &choice) {
+	root.insert(prefix + u"preset"_q, choice.preset);
+	root.insert(prefix + u"tone"_q, choice.tone);
+	root.insert(prefix + u"echo_delay"_q, choice.echoDelay);
+	root.insert(prefix + u"echo_volume"_q, choice.echoVolume);
+	root.insert(prefix + u"noise_volume"_q, choice.noiseVolume);
+}
+
 } // namespace
 
 Settings &Settings::Instance() {
@@ -443,6 +472,25 @@ rpl::producer<VoiceChangerChoice> Settings::voiceChangerValue() const {
 		| rpl::then(_voiceChangerChanges.events());
 }
 
+VoiceChangerChoice Settings::callVoiceChanger() const {
+	return _callVoiceChanger;
+}
+
+void Settings::setCallVoiceChanger(VoiceChangerChoice value) {
+	if (_callVoiceChanger == value) {
+		return;
+	}
+	_callVoiceChanger = value;
+	save();
+	_callVoiceChangerChanges.fire_copy(value);
+}
+
+auto Settings::callVoiceChangerValue() const
+-> rpl::producer<VoiceChangerChoice> {
+	return rpl::single(_callVoiceChanger)
+		| rpl::then(_callVoiceChangerChanges.events());
+}
+
 void Settings::load() {
 	auto file = QFile(FilePath());
 	if (!file.open(QIODevice::ReadOnly)) {
@@ -487,19 +535,8 @@ void Settings::load() {
 	_autoAcceptJoin = root.value(u"auto_accept_join"_q).toBool(false);
 	_avatarOpensProfile = root.value(u"avatar_opens_profile"_q).toBool(false);
 	_showSeconds = root.value(u"show_seconds"_q).toBool(false);
-	const auto defaultVoice = VoiceChangerChoice();
-	_voiceChanger = VoiceChangerChoice{
-		.preset = root.value(u"voice_changer_preset"_q).toInt(
-			defaultVoice.preset),
-		.tone = root.value(u"voice_changer_tone"_q).toInt(
-			defaultVoice.tone),
-		.echoDelay = root.value(u"voice_changer_echo_delay"_q).toInt(
-			defaultVoice.echoDelay),
-		.echoVolume = root.value(u"voice_changer_echo_volume"_q).toInt(
-			defaultVoice.echoVolume),
-		.noiseVolume = root.value(u"voice_changer_noise_volume"_q).toInt(
-			defaultVoice.noiseVolume),
-	};
+	_voiceChanger = ReadVoiceChanger(root, u"voice_changer_"_q);
+	_callVoiceChanger = ReadVoiceChanger(root, u"voice_changer_call_"_q);
 }
 
 void Settings::save() {
@@ -524,11 +561,8 @@ void Settings::save() {
 	root.insert(u"auto_accept_join"_q, _autoAcceptJoin);
 	root.insert(u"avatar_opens_profile"_q, _avatarOpensProfile);
 	root.insert(u"show_seconds"_q, _showSeconds);
-	root.insert(u"voice_changer_preset"_q, _voiceChanger.preset);
-	root.insert(u"voice_changer_tone"_q, _voiceChanger.tone);
-	root.insert(u"voice_changer_echo_delay"_q, _voiceChanger.echoDelay);
-	root.insert(u"voice_changer_echo_volume"_q, _voiceChanger.echoVolume);
-	root.insert(u"voice_changer_noise_volume"_q, _voiceChanger.noiseVolume);
+	WriteVoiceChanger(root, u"voice_changer_"_q, _voiceChanger);
+	WriteVoiceChanger(root, u"voice_changer_call_"_q, _callVoiceChanger);
 
 	const auto path = FilePath();
 	QDir().mkpath(QFileInfo(path).absolutePath());

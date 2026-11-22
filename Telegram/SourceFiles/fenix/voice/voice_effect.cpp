@@ -597,6 +597,19 @@ Preset ChosenForMessages() {
 	});
 }
 
+Preset ChosenForCalls() {
+	const auto choice = Fenix::Get().callVoiceChanger();
+	if (IsSpeed(choice.preset)) {
+		return Preset();
+	}
+	return Resolve(choice.preset, Params{
+		.tone = choice.tone,
+		.echoDelay = choice.echoDelay,
+		.echoVolume = choice.echoVolume,
+		.noiseVolume = choice.noiseVolume,
+	});
+}
+
 Effect::Effect(const Preset &preset, int sampleRate)
 : _preset(preset)
 , _sampleRate(sampleRate) {

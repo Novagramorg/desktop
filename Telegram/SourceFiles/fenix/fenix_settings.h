@@ -35,9 +35,9 @@ enum class ReminderSound {
 	Signal = 3,
 };
 
-// The voice changer's choice for voice messages (see fenix/voice): the
-// effect's id, as on Android, and the settings of the three effects that
-// have them. Ranges are checked where it is used.
+// A voice changer's choice, one for voice messages and one for calls (see
+// fenix/voice): the effect's id, as on Android, and the settings of the
+// three effects that have them. Ranges are checked where it is used.
 struct VoiceChangerChoice {
 	int preset = 0;
 	int tone = 5;
@@ -159,6 +159,12 @@ public:
 	void setVoiceChanger(VoiceChangerChoice value);
 	[[nodiscard]] rpl::producer<VoiceChangerChoice> voiceChangerValue() const;
 
+	// Calls have a choice of their own; a tape speed never applies there.
+	[[nodiscard]] VoiceChangerChoice callVoiceChanger() const;
+	void setCallVoiceChanger(VoiceChangerChoice value);
+	[[nodiscard]] auto callVoiceChangerValue() const
+		-> rpl::producer<VoiceChangerChoice>;
+
 private:
 	Settings();
 	~Settings() = default;
@@ -221,6 +227,9 @@ private:
 
 	VoiceChangerChoice _voiceChanger;
 	rpl::event_stream<VoiceChangerChoice> _voiceChangerChanges;
+
+	VoiceChangerChoice _callVoiceChanger;
+	rpl::event_stream<VoiceChangerChoice> _callVoiceChangerChanges;
 };
 
 [[nodiscard]] inline Settings &Get() {

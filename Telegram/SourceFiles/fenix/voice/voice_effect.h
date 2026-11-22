@@ -110,6 +110,10 @@ struct Preset {
 // The effect chosen for voice messages now. Main thread only.
 [[nodiscard]] Preset ChosenForMessages();
 
+// The effect chosen for calls now; a tape speed can't change a live voice,
+// so it reads as off. Main thread only.
+[[nodiscard]] Preset ChosenForCalls();
+
 // Runs 16-bit mono PCM through a preset, chunk by chunk, as it is recorded.
 // The output may be longer or shorter than the input: the pitch shifter
 // holds back about two pitch periods, a tape speed changes the length, and
