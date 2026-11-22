@@ -1,8 +1,8 @@
 /*
 This file is part of Novagram Desktop, a fork of Telegram Desktop by Vipads LLC.
 
-Voice changer for voice messages: the effect picker, opened from the
-Novagram settings, by a right click on the microphone button or by the
+Voice changer for voice messages and calls: the effect pickers, opened from
+the Novagram settings, by a right click on the microphone button or by the
 button above a locked recording.
 */
 #pragma once
@@ -64,5 +64,12 @@ void ShowRecordingToast(const std::shared_ptr<Ui::Show> &show);
 // Main thread.
 [[nodiscard]] std::shared_ptr<CallVoiceSource> TrackCallVoice(
 	rpl::lifetime &lifetime);
+
+// Calls keep a choice of their own, without the tape speeds.
+[[nodiscard]] QString CallTitle();
+[[nodiscard]] rpl::producer<QString> CallTitleValue();
+
+// The effects for calls; [inCall] gives the box a call window's colors.
+void CallVoiceChangerBox(not_null<Ui::GenericBox*> box, bool inCall);
 
 } // namespace Fenix::Voice

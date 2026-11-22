@@ -9448,7 +9448,8 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 "lng_fenix_reminder_sound_signal" = "Signal tone";
 "lng_fenix_voice_changer" = "Voice changer";
 "lng_fenix_voice_changer_messages" = "Voice messages";
-"lng_fenix_voice_changer_about" = "Record voice messages in another voice: robot, woman, child and more. A right click on the microphone button opens it too.";
+"lng_fenix_voice_changer_calls" = "Calls";
+"lng_fenix_voice_changer_about" = "Record voice messages and talk in calls in another voice: robot, woman, child and more. A right click on the microphone button and the call window open it too.";
 "lng_fenix_voice_changer_current" = "Voice changer: {effect}";
 "lng_fenix_voice_off" = "Off";
 "lng_fenix_voice_speed" = "Record speed (thick or thin)";

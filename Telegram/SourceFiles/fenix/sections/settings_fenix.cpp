@@ -371,6 +371,24 @@ void BuildVoiceChangerRows(SectionBuilder &builder) {
 		Fenix::SetupCopyDeepLink(button, controller, FenixId(), id);
 	}
 
+	const auto callsId = ControlId(u"voice_changer_calls"_q);
+	const auto calls = builder.addButton({
+		.id = callsId,
+		.title = tr::lng_fenix_voice_changer_calls(),
+		.icon = { &st::menuIconPhone },
+		.label = Fenix::Voice::CallTitleValue(),
+		.onClick = [=] {
+			if (controller) {
+				controller->show(
+					Box(Fenix::Voice::CallVoiceChangerBox, false));
+			}
+		},
+		.keywords = { u"voice"_q, u"changer"_q, u"call"_q, u"robot"_q },
+	});
+	if (calls && controller) {
+		Fenix::SetupCopyDeepLink(calls, controller, FenixId(), callsId);
+	}
+
 	builder.addSkip();
 	builder.addDividerText(tr::lng_fenix_voice_changer_about());
 }

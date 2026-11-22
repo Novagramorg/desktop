@@ -24,6 +24,7 @@ This file is part of Novagram Desktop, a fork of Telegram Desktop by Vipads LLC.
 #include "ui/widgets/popup_menu.h"
 #include "ui/wrap/vertical_layout.h"
 #include "styles/style_boxes.h"
+#include "styles/style_calls.h"
 #include "styles/style_fenix.h"
 #include "styles/style_layers.h"
 #include "styles/style_menu_icons.h"
@@ -41,6 +42,60 @@ using Choice = Fenix::VoiceChangerChoice;
 // Long enough to see the radio button move, as on Android.
 constexpr auto kCloseDelay = crl::time(150);
 constexpr auto kToastDuration = crl::time(2000);
+
+// Voice messages and calls keep a choice each; calls have no tape speeds.
+enum class Target {
+	Messages,
+	Calls,
+};
+
+[[nodiscard]] Choice Current(Target target) {
+	return (target == Target::Calls)
+		? Fenix::Get().callVoiceChanger()
+		: Fenix::Get().voiceChanger();
+}
+
+void Save(Target target, Choice choice) {
+	if (target == Target::Calls) {
+		Fenix::Get().setCallVoiceChanger(choice);
+	} else {
+		Fenix::Get().setVoiceChanger(choice);
+	}
+}
+
+// The boxes' widgets: the usual ones, or a call window's dark ones.
+struct BoxStyle {
+	const style::Box *box = nullptr;
+	const style::Checkbox &checkbox;
+	const style::Radio &radio;
+	const style::MediaSlider &slider;
+	const style::FlatLabel &value;
+	const style::FlatLabel &about;
+	const style::FlatLabel *subsection = nullptr;
+};
+
+[[nodiscard]] BoxStyle StyleFor(bool inCall) {
+	if (inCall) {
+		return {
+			.box = &st::groupCallBox,
+			.checkbox = st::groupCallCheckbox,
+			.radio = st::groupCallRadio,
+			.slider = st::groupCallDelaySlider,
+			.value = st::novagramCallVoiceValue,
+			.about = st::groupCallBoxLabel,
+			.subsection = &st::groupCallSubsectionTitle,
+		};
+	}
+	return {
+		.box = nullptr,
+		.checkbox = st::defaultBoxCheckbox,
+		.radio = st::defaultRadio,
+		.slider = st::settingsScale,
+		.value = st::settingsScaleLabel,
+		.about = st::boxDividerLabel,
+		.subsection = nullptr,
+	};
+}
 
 [[nodiscard]] QString Emoji(int id) {
 	if (id == kSpeedRow || IsSpeed(id)) {
@@ -117,22 +172,27 @@ constexpr auto kToastDuration = crl::time(2000);
 	return choice;
 }
 
-// The picker's row of an effect: a speed is under the speed row, and an
-// unknown id reads as off.
-[[nodiscard]] int RowOf(int preset) {
-	return IsSpeed(preset)
-		? kSpeedRow
-		: IsKnown(preset)
-		? preset
-		: kOff;
+// The effect as [target] has it: an unknown id, or a speed in calls, reads
+// as off.
+[[nodiscard]] int EffectiveOf(Target target, int preset) {
+	return (!IsKnown(preset)
+		|| (target == Target::Calls && IsSpeed(preset)))
+		? kOff
+		: preset;
 }
 
-[[nodiscard]] QString TitleOf(int preset) {
-	return Name(IsKnown(preset) ? preset : kOff);
+// The picker's row of an effect: a speed is under the speed row.
+[[nodiscard]] int RowOf(Target target, int preset) {
+	const auto effective = EffectiveOf(target, preset);
+	return IsSpeed(effective) ? kSpeedRow : effective;
 }
 
-[[nodiscard]] bool IsOn(int preset) {
-	return IsKnown(preset) && (preset != kOff);
+[[nodiscard]] QString TitleOf(Target target, int preset) {
+	return Name(EffectiveOf(target, preset));
+}
+
+[[nodiscard]] bool IsOn(Target target, int preset) {
+	return (EffectiveOf(target, preset) != kOff);
 }
 
 // A row's text: the emoji and the name, then the settings of the three
@@ -157,8 +217,12 @@ constexpr auto kToastDuration = crl::time(2000);
 }
 
 // The width of the widest of the texts of the values from [min] to [max].
-[[nodiscard]] int LabelWidth(int min, int max, Fn<QString(int)> text) {
-	const auto &font = st::settingsScaleLabel.style.font;
+[[nodiscard]] int LabelWidth(
+		const BoxStyle &styles,
+		int min,
+		int max,
+		Fn<QString(int)> text) {
+	const auto &font = styles.value.style.font;
 	auto result = 0;
 	for (auto i = min; i <= max; ++i) {
 		result = std::max(result, font->width(text(i)));
@@ -171,6 +235,7 @@ constexpr auto kToastDuration = crl::time(2000);
 // at the same place); [changed] gets every value it moves to.
 void AddSlider(
 		not_null<Ui::GenericBox*> box,
+		const BoxStyle &styles,
 		const tr::phrase<> *title,
 		int min,
 		int max,
@@ -179,12 +244,16 @@ void AddSlider(
 		Fn<QString(int)> text,
 		Fn<void(int)> changed) {
 	if (title) {
-		Ui::AddSubsectionTitle(box->verticalLayout(), (*title)());
+		Ui::AddSubsectionTitle(
+			box->verticalLayout(),
+			(*title)(),
+			{},
+			styles.subsection);
 	}
 	auto sliderWithLabel = ::Settings::MakeSliderWithLabel(
 		box->verticalLayout(),
-		st::settingsScale,
-		st::settingsScaleLabel,
+		styles.slider,
+		styles.value,
 		st::normalFont->spacew * 2,
 		labelWidth,
 		true);
@@ -211,35 +280,43 @@ void AddSlider(
 // keeps them and picks the effect; Cancel leaves both as they were.
 void EffectSettingsBox(
 		not_null<Ui::GenericBox*> box,
+		Target target,
+		bool inCall,
 		int id,
 		Fn<void(Choice)> done) {
+	const auto styles = StyleFor(inCall);
+	if (styles.box) {
+		box->setStyle(*styles.box);
+	}
 	box->setTitle(rpl::single(Name(id)));
 	box->setWidth(st::boxWideWidth);
 
 	const auto state = box->lifetime().make_state<Choice>(
-		Clamped(Fenix::Get().voiceChanger()));
+		Clamped(Current(target)));
 	if (id == kModulation) {
 		AddSlider(
 			box,
+			styles,
 			nullptr,
 			kToneMin,
 			kToneMax,
 			state->tone,
-			LabelWidth(kToneMin, kToneMax, ToneText),
+			LabelWidth(styles, kToneMin, kToneMax, ToneText),
 			ToneText,
 			[=](int value) { state->tone = value; });
 		box->addRow(
 			object_ptr<Ui::FlatLabel>(
 				box,
 				tr::lng_fenix_voice_tone_about(),
-				st::boxDividerLabel),
+				styles.about),
 			st::boxRowPadding + style::margins(0, st::boxLittleSkip, 0, 0));
 	} else if (id == kEcho) {
 		const auto width = std::max(
-			LabelWidth(kStepMin, kStepMax, SecondsText),
-			LabelWidth(kStepMin, kStepMax, PercentText));
+			LabelWidth(styles, kStepMin, kStepMax, SecondsText),
+			LabelWidth(styles, kStepMin, kStepMax, PercentText));
 		AddSlider(
 			box,
+			styles,
 			&tr::lng_fenix_voice_delay,
 			kStepMin,
 			kStepMax,
@@ -249,6 +326,7 @@ void EffectSettingsBox(
 			[=](int value) { state->echoDelay = value; });
 		AddSlider(
 			box,
+			styles,
 			&tr::lng_fenix_voice_volume,
 			kStepMin,
 			kStepMax,
@@ -259,11 +337,12 @@ void EffectSettingsBox(
 	} else {
 		AddSlider(
 			box,
+			styles,
 			&tr::lng_fenix_voice_volume,
 			kStepMin,
 			kStepMax,
 			state->noiseVolume,
-			LabelWidth(kStepMin, kStepMax, PercentText),
+			LabelWidth(styles, kStepMin, kStepMax, PercentText),
 			PercentText,
 			[=](int value) { state->noiseVolume = value; });
 	}
@@ -418,47 +497,16 @@ QPoint RecordingButton::prepareRippleStartPosition() const {
 	return mapFromGlobal(QCursor::pos()) - _rippleRect.topLeft();
 }
 
-} // namespace
-
-QString ChosenTitle() {
-	return TitleOf(Fenix::Get().voiceChanger().preset);
-}
-
-rpl::producer<QString> ChosenTitleValue() {
-	return Fenix::Get().voiceChangerValue(
-	) | rpl::map([](const Choice &choice) {
-		return TitleOf(choice.preset);
-	});
-}
-
-bool ChosenIsOn() {
-	return IsOn(Fenix::Get().voiceChanger().preset);
-}
-
-rpl::producer<bool> ChosenIsOnValue() {
-	return Fenix::Get().voiceChangerValue(
-	) | rpl::map([](const Choice &choice) {
-		return IsOn(choice.preset);
-	}) | rpl::distinct_until_changed();
-}
-
-std::unique_ptr<Ui::AbstractButton> CreateRecordingButton(
-		not_null<Ui::RpWidget*> parent,
-		const style::RippleAnimation &ripple,
-		int size,
-		QMargins rippleMargins,
-		Fn<QRect(QPainter&, QRect)> paintCircle,
-		const style::color &fg) {
-	return std::make_unique<RecordingButton>(
-		parent,
-		ripple,
-		size,
-		rippleMargins,
-		std::move(paintCircle),
-		fg);
-}
-
-void VoiceChangerBox(not_null<Ui::GenericBox*> box) {
+// The effects, one radio row each in Android's order with its emoji, for
+// [target]; [inCall] gives the box a call window's dark colors.
+void ChangerBox(
+		not_null<Ui::GenericBox*> box,
+		Target target,
+		bool inCall) {
+	const auto styles = StyleFor(inCall);
+	if (styles.box) {
+		box->setStyle(*styles.box);
+	}
 	box->setTitle(tr::lng_fenix_voice_changer());
 	box->setWidth(st::boxWideWidth);
 
@@ -472,11 +520,11 @@ void VoiceChangerBox(not_null<Ui::GenericBox*> box) {
 	box->boxClosing() | rpl::on_next([=] {
 		state->hidden = true;
 	}, box->lifetime());
-	const auto saved = [] {
-		return Fenix::Get().voiceChanger();
+	const auto saved = [=] {
+		return Current(target);
 	};
 	const auto group = std::make_shared<Ui::RadiobuttonGroup>(
-		RowOf(saved().preset));
+		RowOf(target, saved().preset));
 	const auto weak = base::weak_qptr<Ui::GenericBox>(box.get());
 
 	const auto close = [=] {
@@ -497,7 +545,7 @@ void VoiceChangerBox(not_null<Ui::GenericBox*> box) {
 	const auto rawGroup = group.get();
 	const auto revert = [=] {
 		state->reverting = true;
-		rawGroup->setValue(RowOf(saved().preset));
+		rawGroup->setValue(RowOf(target, saved().preset));
 		state->reverting = false;
 	};
 	const auto openSettings = [=](int row) {
@@ -513,14 +561,14 @@ void VoiceChangerBox(not_null<Ui::GenericBox*> box) {
 				return;
 			}
 			*chosen = true;
-			Fenix::Get().setVoiceChanger(choice);
+			Save(target, choice);
 			if (weak) {
 				close();
 			}
 		};
 		auto settings = (row == kSpeedRow)
 			? Box(SpeedBox, done)
-			: Box(EffectSettingsBox, row, done);
+			: Box(EffectSettingsBox, target, inCall, row, done);
 		settings->boxClosing() | rpl::on_next([=] {
 			if (!*chosen && weak) {
 				revert();
@@ -538,19 +586,23 @@ void VoiceChangerBox(not_null<Ui::GenericBox*> box) {
 		}
 		auto choice = saved();
 		choice.preset = row;
-		Fenix::Get().setVoiceChanger(choice);
+		Save(target, choice);
 		close();
 	});
 
 	const auto current = Clamped(saved());
 	for (const auto id : RowIds()) {
+		if (id == kSpeedRow && target == Target::Calls) {
+			continue;
+		}
 		const auto radio = box->addRow(
 			object_ptr<Ui::Radiobutton>(
 				box,
 				group,
 				id,
 				RowText(id, current),
-				st::defaultBoxCheckbox),
+				styles.checkbox,
+				styles.radio),
 			st::boxRowPadding + style::margins(0, 0, 0, st::boxLittleSkip));
 		// A long name with its settings (Uzbek, Russian) takes two lines.
 		radio->setAllowTextLines(2);
@@ -567,6 +619,65 @@ void VoiceChangerBox(not_null<Ui::GenericBox*> box) {
 	}
 
 	box->addButton(tr::lng_box_ok(), [=] { box->closeBox(); });
+}
+
+} // namespace
+
+QString ChosenTitle() {
+	return TitleOf(Target::Messages, Fenix::Get().voiceChanger().preset);
+}
+
+rpl::producer<QString> ChosenTitleValue() {
+	return Fenix::Get().voiceChangerValue(
+	) | rpl::map([](const Choice &choice) {
+		return TitleOf(Target::Messages, choice.preset);
+	});
+}
+
+bool ChosenIsOn() {
+	return IsOn(Target::Messages, Fenix::Get().voiceChanger().preset);
+}
+
+rpl::producer<bool> ChosenIsOnValue() {
+	return Fenix::Get().voiceChangerValue(
+	) | rpl::map([](const Choice &choice) {
+		return IsOn(Target::Messages, choice.preset);
+	}) | rpl::distinct_until_changed();
+}
+
+void VoiceChangerBox(not_null<Ui::GenericBox*> box) {
+	ChangerBox(box, Target::Messages, false);
+}
+
+QString CallTitle() {
+	return TitleOf(Target::Calls, Fenix::Get().callVoiceChanger().preset);
+}
+
+rpl::producer<QString> CallTitleValue() {
+	return Fenix::Get().callVoiceChangerValue(
+	) | rpl::map([](const Choice &choice) {
+		return TitleOf(Target::Calls, choice.preset);
+	});
+}
+
+void CallVoiceChangerBox(not_null<Ui::GenericBox*> box, bool inCall) {
+	ChangerBox(box, Target::Calls, inCall);
+}
+
+std::unique_ptr<Ui::AbstractButton> CreateRecordingButton(
+		not_null<Ui::RpWidget*> parent,
+		const style::RippleAnimation &ripple,
+		int size,
+		QMargins rippleMargins,
+		Fn<QRect(QPainter&, QRect)> paintCircle,
+		const style::color &fg) {
+	return std::make_unique<RecordingButton>(
+		parent,
+		ripple,
+		size,
+		rippleMargins,
+		std::move(paintCircle),
+		fg);
 }
 
 void SetupRecordButtonMenu(
@@ -609,7 +720,7 @@ void SetupRecordButtonMenu(
 
 void ShowRecordingToast(const std::shared_ptr<Ui::Show> &show) {
 	const auto preset = Fenix::Get().voiceChanger().preset;
-	if (!show || !show->valid() || !IsOn(preset)) {
+	if (!show || !show->valid() || !IsOn(Target::Messages, preset)) {
 		return;
 	}
 	show->showToast(

@@ -6,6 +6,7 @@ using "ui/widgets/widgets.style";
 using "settings/settings.style";
 using "info/info.style";
 using "ui/chat/chat.style";
+using "calls/calls.style";
 
 // A message's menu: its edit history (a clock with a pen, as Android's).
 novagramMenuIconEditHistory: icon {{ "menu/edited_status", menuIconColor }};
@@ -65,3 +66,8 @@ novagramDeletedEmptyTitleFont: font(14px semibold);
 novagramVoiceChangerIcon: icon {{ "voice_lock/voice_changer-22x22", historyToDownFg }};
 novagramVoiceChangerIconOn: icon {{ "voice_lock/voice_changer-22x22", windowFgActive }};
 novagramVoiceChangerOnRadius: 16px;
+
+// A call window's dark voice changer boxes: the value next to a slider.
+novagramCallVoiceValue: FlatLabel(settingsScaleLabel) {
+	textFg: groupCallMembersFg;
+}
