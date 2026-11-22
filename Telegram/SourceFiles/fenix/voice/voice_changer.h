@@ -2,10 +2,12 @@
 This file is part of Novagram Desktop, a fork of Telegram Desktop by Vipads LLC.
 
 Voice changer for voice messages and calls: the effect pickers, opened from
-the Novagram settings, by a right click on the microphone button or by the
-button above a locked recording.
+the Novagram settings, by a right click on the microphone button, by the
+button above a locked recording, or from a call's window.
 */
 #pragma once
+
+#include "base/unique_qptr.h"
 
 namespace style {
 struct RippleAnimation;
@@ -14,6 +16,7 @@ struct RippleAnimation;
 namespace Ui {
 class AbstractButton;
 class GenericBox;
+class IconButton;
 class RpWidget;
 class Show;
 } // namespace Ui
@@ -68,8 +71,17 @@ void ShowRecordingToast(const std::shared_ptr<Ui::Show> &show);
 // Calls keep a choice of their own, without the tape speeds.
 [[nodiscard]] QString CallTitle();
 [[nodiscard]] rpl::producer<QString> CallTitleValue();
+[[nodiscard]] rpl::producer<bool> CallIsOnValue();
 
 // The effects for calls; [inCall] gives the box a call window's colors.
 void CallVoiceChangerBox(not_null<Ui::GenericBox*> box, bool inCall);
+
+// The voice changer button of a one-to-one call's window, next to its "pin
+// on top" button: [inTitle] when that is among the window title's buttons.
+// Lit while an effect is on; opens the effects for calls.
+[[nodiscard]] base::unique_qptr<Ui::IconButton> CreateCallButton(
+	not_null<QWidget*> parent,
+	bool inTitle,
+	std::shared_ptr<Ui::Show> show);
 
 } // namespace Fenix::Voice

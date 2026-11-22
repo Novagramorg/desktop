@@ -17,6 +17,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "data/data_photo_media.h"
 #include "data/data_cloud_file.h"
 #include "data/data_changes.h"
+#include "fenix/voice/voice_changer.h"
 #include "calls/group/calls_group_common.h"
 #include "calls/group/calls_group_invite_controller.h"
 #include "calls/ui/calls_device_menu.h"
@@ -329,6 +330,11 @@ void Panel::initWindow() {
 		const auto inControls = (_fingerprint
 			&& _fingerprint->geometry().contains(widgetPoint))
 			|| pinOnTopRect().contains(widgetPoint)
+			|| (_voiceChanger
+				&& !_voiceChanger->isHidden()
+				&& QRect(
+					_voiceChanger->mapTo(widget().get(), QPoint()),
+					_voiceChanger->size()).contains(widgetPoint))
 			|| QRect(
 				(widget()->width() - buttonsWidth) / 2,
 				_answerHangupRedial->y(),
@@ -399,6 +405,18 @@ void Panel::initWidget() {
 
 void Panel::initControls() {
 	createPinOnTop();
+
+	// Novagram voice changer: next to "pin on top", as Android's call
+	// screen has it at the top; it moves over when that one hides.
+	const auto wrap = _window->controlsWrap();
+	_voiceChanger = Fenix::Voice::CreateCallButton(
+		wrap ? wrap : widget().get(),
+		(wrap != nullptr),
+		uiShow());
+	_pinOnTop->shownValue(
+	) | rpl::skip(1) | rpl::on_next([=] {
+		updateControlsGeometry();
+	}, _voiceChanger->lifetime());
 
 	for (const auto &button : bottomButtons()) {
 		setupButtonTooltip(button);
@@ -1031,6 +1049,9 @@ void Panel::showControls() {
 
 	widget()->showChildren();
 	_pinOnTop->setVisible(!_fullScreenOrMaximized.current());
+	if (_voiceChanger) {
+		_voiceChanger->show();
+	}
 	if (_rateCall) {
 		hideControlsForRating();
 	} else {
@@ -1204,6 +1225,9 @@ void Panel::hideControlsForRating() {
 	_screencast->hide(anim::type::instant);
 	_mute->hide(anim::type::instant);
 	_addPeople->hide(anim::type::instant);
+	if (_voiceChanger) {
+		_voiceChanger->hide();
+	}
 	if (_fingerprint) {
 		_fingerprint->hide();
 	}
@@ -1364,6 +1388,9 @@ void Panel::updateControlsGeometry() {
 		const auto controlsWidth = controlsGeometry.width()
 			+ ((_pinOnTop && !_pinOnTop->isHidden())
 				? _pinOnTop->width()
+				: 0)
+			+ ((_voiceChanger && !_voiceChanger->isHidden())
+				? _voiceChanger->width()
 				: 0);
 		const auto minLeft = (controlsGeometry.center().x() < halfWidth)
 			? (controlsWidth + st::callFingerprintTop)
@@ -1401,6 +1428,23 @@ void Panel::updateControlsGeometry() {
 				controls.y());
 		} else {
 			_pinOnTop->moveToRight(0, 0);
+		}
+	}
+	if (_voiceChanger) {
+		const auto pin = (_pinOnTop && !_pinOnTop->isHidden())
+			? _pinOnTop->width()
+			: 0;
+		if (_window->controlsWrap()) {
+			const auto controls = _window->controlsGeometry();
+			const auto onTheLeft = (controls.center().x()
+				< widget()->width() / 2);
+			_voiceChanger->move(
+				(onTheLeft
+					? (controls.x() + controls.width() + pin)
+					: (controls.x() - pin - _voiceChanger->width())),
+				controls.y());
+		} else {
+			_voiceChanger->moveToRight(pin, 0);
 		}
 	}
 	const auto innerHeight = std::max(widget()->height(), st::callHeightMin);

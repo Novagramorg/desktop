@@ -660,8 +660,52 @@ rpl::producer<QString> CallTitleValue() {
 	});
 }
 
+rpl::producer<bool> CallIsOnValue() {
+	return Fenix::Get().callVoiceChangerValue(
+	) | rpl::map([](const Choice &choice) {
+		return IsOn(Target::Calls, choice.preset);
+	}) | rpl::distinct_until_changed();
+}
+
 void CallVoiceChangerBox(not_null<Ui::GenericBox*> box, bool inCall) {
 	ChangerBox(box, Target::Calls, inCall);
+}
+
+base::unique_qptr<Ui::IconButton> CreateCallButton(
+		not_null<QWidget*> parent,
+		bool inTitle,
+		std::shared_ptr<Ui::Show> show) {
+	auto result = base::make_unique_q<Ui::IconButton>(
+		parent,
+		inTitle ? st::novagramCallTitleVoice : st::novagramCallVoice);
+	const auto raw = result.get();
+	CallIsOnValue(
+	) | rpl::on_next([=](bool on) {
+		raw->setIconOverride(
+			(!on
+				? nullptr
+				: inTitle
+				? &st::novagramCallTitleVoiceOn
+				: &st::novagramCallVoiceOn),
+			(!on
+				? nullptr
+				: inTitle
+				? &st::novagramCallTitleVoiceOnOver
+				: &st::novagramCallVoiceOn));
+	}, raw->lifetime());
+	CallTitleValue(
+	) | rpl::on_next([=](const QString &title) {
+		raw->setAccessibleName(tr::lng_fenix_voice_changer_current(
+			tr::now,
+			lt_effect,
+			title));
+	}, raw->lifetime());
+	raw->setClickedCallback([=] {
+		if (show->valid()) {
+			show->showBox(Box(CallVoiceChangerBox, true));
+		}
+	});
+	return result;
 }
 
 std::unique_ptr<Ui::AbstractButton> CreateRecordingButton(

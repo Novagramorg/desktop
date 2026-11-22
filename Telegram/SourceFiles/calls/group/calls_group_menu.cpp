@@ -13,6 +13,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "calls/group/ui/calls_group_recording_box.h"
 #include "data/data_peer.h"
 #include "data/data_group_call.h"
+#include "fenix/voice/voice_changer.h"
 #include "info/profile/info_profile_values.h" // Info::Profile::NameValue.
 #include "ui/widgets/dropdown_menu.h"
 #include "ui/widgets/menu/menu.h"
@@ -574,6 +575,15 @@ void FillMenu(
 			menu->menu(),
 			real->recordStartDateValue(),
 			handler));
+	}
+	if (!call->rtmp()) {
+		// Novagram voice changer: another voice in this call too.
+		menu->addAction(
+			tr::lng_fenix_voice_changer_current(
+				tr::now,
+				lt_effect,
+				Fenix::Voice::CallTitle()),
+			[=] { showBox(Box(Fenix::Voice::CallVoiceChangerBox, true)); });
 	}
 	menu->addAction(tr::lng_group_call_settings(tr::now), [=] {
 		if (const auto strong = weak.get()) {

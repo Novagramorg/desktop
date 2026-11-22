@@ -71,3 +71,25 @@ novagramVoiceChangerOnRadius: 16px;
 novagramCallVoiceValue: FlatLabel(settingsScaleLabel) {
 	textFg: groupCallMembersFg;
 }
+
+// A call window's voice changer button, next to its "pin on top" (among
+// the title's buttons or in the corner), lit while an effect is on.
+novagramCallTitleVoice: IconButton(callTitlePinOnTop) {
+	icon: icon {{ "voice_lock/voice_changer-16x16", callNameFg, point(10px, 4px) }};
+	iconOver: icon {
+		{ windowTitleButtonSize, callBgButton },
+		{ windowTitleButtonSize, callMuteRipple },
+		{ "voice_lock/voice_changer-16x16", callNameFg, point(10px, 4px) },
+	};
+}
+novagramCallTitleVoiceOn: icon {{ "voice_lock/voice_changer-16x16", groupCallActiveFg, point(10px, 4px) }};
+novagramCallTitleVoiceOnOver: icon {
+	{ windowTitleButtonSize, callBgButton },
+	{ windowTitleButtonSize, callMuteRipple },
+	{ "voice_lock/voice_changer-16x16", groupCallActiveFg, point(10px, 4px) },
+};
+novagramCallVoice: IconButton(callPinOnTop) {
+	icon: icon {{ "voice_lock/voice_changer-16x16", callStatusFg, point(10px, 4px) }};
+	iconOver: icon {{ "voice_lock/voice_changer-16x16", callNameFg, point(10px, 4px) }};
+}
+novagramCallVoiceOn: icon {{ "voice_lock/voice_changer-16x16", groupCallActiveFg, point(10px, 4px) }};

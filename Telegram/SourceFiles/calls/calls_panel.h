@@ -208,6 +208,8 @@ private:
 	Ui::CallButton *_audioDeviceToggle = nullptr;
 	base::unique_qptr<Ui::FadeWrap<Ui::CallButton>> _addPeople;
 	base::unique_qptr<Ui::IconButton> _pinOnTop;
+	// Novagram voice changer, next to "pin on top".
+	base::unique_qptr<Ui::IconButton> _voiceChanger;
 	object_ptr<Ui::ImportantTooltip> _buttonTooltip = { nullptr };
 	QPointer<Ui::CallButton> _buttonTooltipFor;
 	bool _buttonLabelsShown = true;
