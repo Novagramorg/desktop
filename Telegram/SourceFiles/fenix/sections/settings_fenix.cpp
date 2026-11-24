@@ -633,13 +633,18 @@ void BuildAdminFoldersRows(SectionBuilder &builder) {
 		},
 	});
 	const auto refreshId = ControlId(u"admin_folders_refresh"_q);
-	const auto refresh = builder.addButton({
-		.id = refreshId,
-		.title = tr::lng_fenix_admin_folders_refresh(),
-		.icon = { &st::menuIconRestore },
-		.keywords = { u"folders"_q, u"admin"_q, u"refresh"_q },
-		.shown = folders->enabledValue(),
-	});
+	// Settings search lists a row whether it is shown or not (it has no
+	// controller): offer Refresh there only while there is something to
+	// refresh, or the result would lead to a hidden row.
+	const auto refresh = (controller || folders->enabled())
+		? builder.addButton({
+			.id = refreshId,
+			.title = tr::lng_fenix_admin_folders_refresh(),
+			.icon = { &st::menuIconRestore },
+			.keywords = { u"folders"_q, u"admin"_q, u"refresh"_q },
+			.shown = folders->enabledValue(),
+		})
+		: nullptr;
 
 	builder.addSkip();
 	builder.addDividerText(tr::lng_fenix_admin_folders_about());
