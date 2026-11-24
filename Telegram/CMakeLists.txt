@@ -1006,6 +1006,8 @@ PRIVATE
     fenix/text_style_box.h
     fenix/auto_accept_join.cpp
     fenix/auto_accept_join.h
+    fenix/admin_folders.cpp
+    fenix/admin_folders.h
     fenix/fenix_deep_links.cpp
     fenix/fenix_deep_links.h
     fenix/auto_answer.cpp
