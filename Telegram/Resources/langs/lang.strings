@@ -9419,9 +9419,17 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 "lng_fenix_join_all_none" = "No other accounts to join with.";
 "lng_fenix_join_all_done#one" = "{count} account joined.";
 "lng_fenix_join_all_done#other" = "{count} accounts joined.";
+"lng_fenix_admin_folders" = "Admin folders";
+"lng_fenix_admin_folders_about" = "Four folders that gather the groups and channels you own or administer.";
+"lng_fenix_admin_folders_info" = "These folders are saved to your Telegram account, so they appear on your other devices too. They follow your rights as they change; Refresh folders rebuilds them and drops your own edits.";
+"lng_fenix_admin_folders_refresh" = "Refresh folders";
 "lng_fenix_admin_folders_none" = "Nothing to add — you are not an owner or admin anywhere.";
 "lng_fenix_admin_folders_limit" = "Not enough folder slots. Telegram allows {limit} folders and you already have {have}.";
+"lng_fenix_admin_folders_truncated" = "{folder} holds only the first {chats} chats — Telegram's limit per folder.";
+"lng_fenix_admin_folders_remove" = "Remove these folders from your account?";
+"lng_fenix_admin_folders_updated" = "Folders updated";
 "lng_fenix_admin_folders_loading" = "Your chats are still loading. Try again in a moment.";
+"lng_fenix_admin_folders_failed" = "Some folders could not be saved. Check your connection and try again.";
 "lng_fenix_features_keywords" = "ghost,stealth,offline,fenix";
 "lng_fenix_bot_login" = "Log in with bot token";
 "lng_fenix_bot_token" = "Bot token";

@@ -4,6 +4,7 @@ This file is part of Novagram Desktop, a fork of Telegram Desktop by Vipads LLC.
 #include "fenix/sections/settings_fenix.h"
 
 #include "fenix/fenix_settings.h"
+#include "fenix/admin_folders.h"
 #include "fenix/fenix_deep_links.h"
 #include "fenix/chat_lock.h"
 #include "fenix/chat_lock_box.h"
@@ -582,6 +583,137 @@ void BuildChatLockRows(SectionBuilder &builder) {
 		});
 }
 
+void ShowAdminFoldersResult(
+		not_null<Window::SessionController*> controller,
+		const Fenix::AdminFolders::Result &result) {
+	auto lines = QStringList();
+	if (!result.blocked.isEmpty()) {
+		lines.push_back(result.blocked);
+	}
+	for (const auto &[title, kept] : result.truncated) {
+		lines.push_back(tr::lng_fenix_admin_folders_truncated(
+			tr::now,
+			lt_folder,
+			title,
+			lt_chats,
+			QString::number(kept)));
+	}
+	if (result.failed) {
+		lines.push_back(tr::lng_fenix_admin_folders_failed(tr::now));
+	}
+	if (lines.isEmpty()) {
+		controller->showToast(tr::lng_fenix_admin_folders_updated(tr::now));
+		return;
+	}
+	controller->show(Ui::MakeInformBox({
+		.text = lines.join(u"\n\n"_q),
+		.title = tr::lng_fenix_admin_folders(),
+	}));
+}
+
+// The folders are written to the Telegram account, not to this computer:
+// they show on every device of it. So the switch only asks first, and moves
+// once they are really made or removed.
+void BuildAdminFoldersRows(SectionBuilder &builder) {
+	const auto controller = builder.controller();
+	const auto folders = &Fenix::GetAdminFolders(builder.session());
+	const auto forced = std::make_shared<rpl::event_stream<bool>>();
+
+	const auto toggleId = ControlId(u"admin_folders"_q);
+	const auto toggle = builder.addButton({
+		.id = toggleId,
+		.title = tr::lng_fenix_admin_folders(),
+		.icon = { &st::menuIconAdmin },
+		.toggled = rpl::merge(folders->enabledValue(), forced->events()),
+		.keywords = {
+			u"folders"_q,
+			u"admin"_q,
+			u"groups"_q,
+			u"channels"_q,
+		},
+	});
+	const auto refreshId = ControlId(u"admin_folders_refresh"_q);
+	const auto refresh = builder.addButton({
+		.id = refreshId,
+		.title = tr::lng_fenix_admin_folders_refresh(),
+		.icon = { &st::menuIconRestore },
+		.keywords = { u"folders"_q, u"admin"_q, u"refresh"_q },
+		.shown = folders->enabledValue(),
+	});
+
+	builder.addSkip();
+	builder.addDividerText(tr::lng_fenix_admin_folders_about());
+
+	if (!controller || !toggle || !refresh) {
+		return;
+	}
+	Fenix::SetupCopyDeepLink(toggle, controller, FenixId(), toggleId);
+	Fenix::SetupCopyDeepLink(refresh, controller, FenixId(), refreshId);
+
+	// Back to what is on the account.
+	const auto sync = [=] {
+		forced->fire_copy(folders->enabled());
+	};
+	const auto report = crl::guard(toggle, [=](
+			Fenix::AdminFolders::Result result) {
+		sync();
+		ShowAdminFoldersResult(controller, result);
+	});
+	const auto ask = [=](bool on) {
+		auto box = Ui::MakeConfirmBox({
+			.text = (on
+				? tr::lng_fenix_admin_folders_info()
+				: tr::lng_fenix_admin_folders_remove()),
+			.confirmed = [=](Fn<void()> close) {
+				close();
+				// Not from inside the box: a result shown at once would
+				// replace it while its button handler is still running.
+				crl::on_main(toggle, [=] {
+					if (on) {
+						folders->enable(report);
+					} else {
+						folders->disable(crl::guard(toggle, sync));
+					}
+				});
+			},
+			.confirmText = (on ? tr::lng_continue() : tr::lng_box_remove()),
+			.title = tr::lng_fenix_admin_folders(),
+		});
+		box->boxClosing() | rpl::on_next(sync, box->lifetime());
+		controller->show(std::move(box));
+	};
+	toggle->toggledValue(
+	) | rpl::filter([=](bool now) {
+		return (now != folders->enabled());
+	}) | rpl::on_next([=](bool now) {
+		if (folders->busy()) {
+			sync();
+		} else {
+			ask(now);
+		}
+	}, toggle->lifetime());
+
+	refresh->addClickHandler([=] {
+		if (!folders->busy()) {
+			folders->refresh(report);
+		}
+	});
+
+	// Every operation is a chain of requests and a second one is refused
+	// while it runs: grey the rows out meanwhile, so a click that does
+	// nothing does not look like a broken button.
+	folders->busyValue(
+	) | rpl::on_next([=](bool busy) {
+		const auto color = busy
+			? std::make_optional(st::windowSubTextFg->c)
+			: std::optional<QColor>();
+		for (const auto button : { toggle, refresh }) {
+			button->setDisabled(busy);
+			button->setColorOverride(color);
+		}
+	}, toggle->lifetime());
+}
+
 void BuildAutoAcceptJoinRows(SectionBuilder &builder) {
 	builder.addSkip();
 	builder.addSubsectionTitle(tr::lng_fenix_section_channels());
@@ -598,6 +730,8 @@ void BuildAutoAcceptJoinRows(SectionBuilder &builder) {
 
 	builder.addSkip();
 	builder.addDividerText(tr::lng_fenix_auto_accept_join_about());
+
+	BuildAdminFoldersRows(builder);
 }
 
 class FenixSection : public Section<FenixSection> {
